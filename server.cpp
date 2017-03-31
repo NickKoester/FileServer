@@ -5,11 +5,45 @@
 #include <unistd.h>
 #include "fs_server.h"
 
-
+enum REQUEST_T { SESSION, READBLOCK, WRITEBLOCK, CREATE, DELETE };
 
 struct sockaddr_in addr, cli_addr;
 
 int main()
+{
+    while (1) {
+        REQUEST_T requestType = getRequest();
+    switch(requestType)
+    {
+        case SESSION:
+           cout << "Session Request\n";
+           break;
+
+        case READBLOCK:
+           cout << "Readblock Request\n";
+           break;
+
+        case WRITEBLOCK:
+           cout << "Writeblock Request\n";
+           break;
+
+        case CREATE:
+           cout << "Create Request\n";
+           break;
+
+        case DELETE:
+           cout << "Delete Request\n";
+           break;
+
+        default:
+           cout << "Fuck\n";
+           break;
+    }
+       
+    return 0;
+}
+
+REQUEST_T getRequest()
 {
     int sock = socket(AF_INET, SOCK_STREAM, 0);
     if (sock < 0) return -1;
@@ -38,9 +72,7 @@ int main()
     close(sock);
 
 
-
-
-
-
-    return 0;
+    REQUEST_TYPE type; 
+    return type;
 }
+
