@@ -10,8 +10,8 @@ public:
     writerFinish();
 private:
     std::mutex rwLock;
-    std::conditional_variable waitingReaders;
-    std::conditional_variable waitingWriters;
+    std::condition_variable waitingReaders;
+    std::condition_variable waitingWriters;
 
     size_t numReaders;
     size_t numWriters;
