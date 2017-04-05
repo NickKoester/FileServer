@@ -9,11 +9,16 @@ using namespace std;
 
 int getMessageLength(const char *);
 
+
+
 enum REQUEST_T { SESSION, READBLOCK, WRITEBLOCK, CREATE, DELETE };
 
 struct sockaddr_in addr, cli_addr;
 
 unordered_map<string, string> users;
+
+const int HEADER_SIZE = (sizeof(char) * FS_MAXUSERNAME) + sizeof(unsigned) + sizeof(char);
+
 
 
 int main(int argc, char *argv[])
@@ -78,8 +83,28 @@ int main(int argc, char *argv[])
     while (1) {
         int msg_fd = accept(sockfd, nullptr, nullptr);
 
+        char test[4096];
+        memset(test, 0, 4096);
+        int test_rc = recv(msg_fd, test, 4096, 0);
+        cout << "TEST_RC: " << test_rc << endl;
+        printf("MESSAGE:    %s\n", test);
+ 
+       // auto send_data = to_string(getMessageLength(test)).c_str();
+       auto testsend = "44";
+       send(msg_fd, testsend, strlen(testsend), 0);        
+
+       char test2[4096];
+       memset(test2, 0, 4096);
+       int test_rc2 = recv(msg_fd, test2, 4096, 0);
+       cout << "TEST_RC 2:    " << test_rc2 << endl;
+       printf("MESSAGE: %s", test2);
+       exit(1); 
+
+
+
+
+
         //Getting the header -- get rid of magic number - this was just a guess 
-        const int HEADER_SIZE = (sizeof(char) * FS_MAXUSERNAME) + sizeof(unsigned) + sizeof(char);
         char buff[HEADER_SIZE];
         memset(buff, 0, sizeof(buff));
         int bytes_rcvd = 0;
@@ -95,6 +120,8 @@ int main(int argc, char *argv[])
         printf("Header:\t%s\n", buff);
         
         int messageLength = getMessageLength(buff);
+        cout << "MESSAGE LENGTH: " << messageLength << endl;
+        
         char *mess = new char[messageLength];
        // memset(mess, 0, sizeof(mess));
         int bytes_rcvd2 = 0;
