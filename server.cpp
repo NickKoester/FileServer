@@ -4,12 +4,9 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include "fs_server.h"
+#include "fs_crypt.h"
 #include <unordered_map>
 using namespace std;
-
-int getMessageLength(const char *);
-
-
 
 enum REQUEST_T { SESSION, READBLOCK, WRITEBLOCK, CREATE, DELETE };
 
@@ -17,9 +14,15 @@ struct sockaddr_in addr, cli_addr;
 
 unordered_map<string, string> users;
 
-const int HEADER_SIZE = (sizeof(char) * FS_MAXUSERNAME) + sizeof(unsigned) + sizeof(char);
+const int MAX_HEADER_SIZE = (sizeof(char) * FS_MAXUSERNAME) + sizeof(unsigned) + sizeof(char);
 
+int getMessageLength(const char*);
 
+void processHeader(int sockfd, char* buf, int& message_size);
+
+void processRequest(int sockfd, char* buf, int expected);
+
+REQUEST_T getRequestType(char* rq);
 
 int main(int argc, char *argv[])
 {
@@ -27,6 +30,14 @@ int main(int argc, char *argv[])
  *  TODO: 2. Initialize the list of free disk blocks
  *  3. Set up the socket and call listen.
  */
+
+/*
+ *  TODO: split this into more functions
+ *  TODO: change strings to c_strs?
+ *
+ */
+
+
 
     string user;
     string password;
@@ -83,89 +94,48 @@ int main(int argc, char *argv[])
     while (1) {
         int msg_fd = accept(sockfd, nullptr, nullptr);
 
-        char test[4096];
-        memset(test, 0, 4096);
-        int test_rc = recv(msg_fd, test, 4096, 0);
-        cout << "TEST_RC: " << test_rc << endl;
-        printf("MESSAGE:    %s\n", test);
- 
-       // auto send_data = to_string(getMessageLength(test)).c_str();
-       auto testsend = "44";
-       send(msg_fd, testsend, strlen(testsend), 0);        
-
-       char test2[4096];
-       memset(test2, 0, 4096);
-       int test_rc2 = recv(msg_fd, test2, 4096, 0);
-       cout << "TEST_RC 2:    " << test_rc2 << endl;
-       printf("MESSAGE: %s", test2);
-       exit(1); 
-
-
-
-
-
-        //Getting the header -- get rid of magic number - this was just a guess 
-        char buff[HEADER_SIZE];
-        memset(buff, 0, sizeof(buff));
-        int bytes_rcvd = 0;
-        while (bytes_rcvd < HEADER_SIZE) {
-            int rc = recv(msg_fd, buff + bytes_rcvd, HEADER_SIZE- bytes_rcvd, 0);
-            cout << rc << endl;
-            if (rc == -1) {
-                cerr << "Error getting message\n";
-            }
-            if (rc == 0) break;
-            bytes_rcvd += rc;
-        }
-        printf("Header:\t%s\n", buff);
+        char username[FS_MAXUSERNAME + 1]; // TODO: dynamic size? +1 for null
+        int msg_size = 0; 
+        memset(username, 0, FS_MAXUSERNAME + 1);
         
-        int messageLength = getMessageLength(buff);
-        cout << "MESSAGE LENGTH: " << messageLength << endl;
-        
-        char *mess = new char[messageLength];
-       // memset(mess, 0, sizeof(mess));
-        int bytes_rcvd2 = 0;
-        while (bytes_rcvd2 < messageLength) {
-            int rc = recv(msg_fd, mess + bytes_rcvd2, messageLength - bytes_rcvd2, 0);
-            if (rc == -1) {
-                cerr << "Error getting message\n";
-            }
-            if (rc == 0) break;
-            bytes_rcvd2 += rc;
-        }
-        printf("Encrypted Message:\t%s\n", mess);
-        delete[] mess;
+        processHeader(msg_fd, username, msg_size);
        
+        char* msg = new char[msg_size]; //TODO: do we need msg_size+1???
+        processRequest(msg_fd, msg, msg_size);
+
+        string testuser(username);
+        unsigned int* sizet = new unsigned int[1];
+        char* decryptd = static_cast<char*>(fs_decrypt(users[testuser].c_str(), msg, msg_size, sizet));
+
+        if (decryptd == nullptr) close(msg_fd);
+
+
+        REQUEST_T requestType = getRequestType(decryptd);
+        switch(requestType)
+        {
+            case SESSION:
+               cout << "Session Request\n";
+               break;
+            case READBLOCK:
+               cout << "Readblock Request\n";
+               break;
+            case WRITEBLOCK:
+               cout << "Writeblock Request\n";
+               break;
+            case CREATE:
+               cout << "Create Request\n";
+               break;
+            case DELETE:
+               cout << "Delete Request\n";
+               break;
+            default:
+               cout << "Fuck\n";
+               break;
+        }
+
+        delete [] decryptd;
+        delete [] msg;
         close(msg_fd);
-
-    //TODO: this shit
-    REQUEST_T requestType = SESSION;
-    switch(requestType)
-    {
-        case SESSION:
-           cout << "Session Request\n";
-           break;
-
-        case READBLOCK:
-           cout << "Readblock Request\n";
-           break;
-
-        case WRITEBLOCK:
-           cout << "Writeblock Request\n";
-           break;
-
-        case CREATE:
-           cout << "Create Request\n";
-           break;
-
-        case DELETE:
-           cout << "Delete Request\n";
-           break;
-
-        default:
-           cout << "Fuck\n";
-           break;
-    }
     }
        
     return 0;
@@ -177,37 +147,48 @@ int getMessageLength(const char *buff) {
     int length = atoi(buff + i);
     return length;
 }
-//REQUEST_T blowjob(char *buff);
+
+void processHeader(int sockfd, char* buf, int& message_size) {
+    char buffer[MAX_HEADER_SIZE];
+    int i = 0;
+    int user_size = 0;
+    // i - 1 because we're checking the last received byte
+    while (i == 0 || buffer[i - 1] != '\0') {
+        int received = recv(sockfd, buffer + i, 1, 0);
+        if (received == -1) {
+            close(sockfd);
+            cerr << "error receiving message" << endl;
+        }
+        if (received == 0) return;
+        if (buffer[i] == ' ') 
+            user_size = i;
+        i += received;
+    }
+    strncpy(buf, buffer, user_size); 
+    buf[user_size] = '\0'; // strncpy does not null-terminate
+    message_size = getMessageLength(buffer);
+} 
 
 
+void processRequest(int sockfd, char* buf, int expected) {
+    int rcv = 0;
+    while (rcv < expected) {
+        int received = recv(sockfd, buf + rcv, expected - rcv, 0);
+        if (received == -1) {
+            close(sockfd);
+            cerr << "error receiving message" << endl;
+        }
+        if (received == 0) break;
+        rcv += received;
+    }
+}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+REQUEST_T getRequestType(char* rq) {
+    char type = rq[3];
+    if (type == 'S') return SESSION;
+    else if (type == 'R') return READBLOCK;
+    else if (type == 'W') return WRITEBLOCK;
+    else if (type == 'C') return CREATE;
+    else return DELETE;
+}
 
