@@ -23,7 +23,7 @@ void BlockManager::initialize() {
         disk_readblock(blocknum, &currentNode);
 
         for (uint32_t i = 0; i < currentNode.size; i++) {
-            isFree[blocknum] = false;
+            isFree[currentNode.blocks[i]] = false;
 
             //if its a file theres no more work to do
             if(currentNode.type == 'f') {

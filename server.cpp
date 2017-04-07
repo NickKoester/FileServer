@@ -3,9 +3,10 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include <unordered_map>
+
 #include "fs_server.h"
 #include "fs_crypt.h"
-#include <unordered_map>
 using namespace std;
 
 enum REQUEST_T { SESSION, READBLOCK, WRITEBLOCK, CREATE, DELETE };
@@ -115,6 +116,7 @@ int main(int argc, char *argv[])
         {
             case SESSION:
                cout << "Session Request\n";
+               
                break;
             case READBLOCK:
                cout << "Readblock Request\n";
