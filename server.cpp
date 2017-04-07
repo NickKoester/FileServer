@@ -7,6 +7,10 @@
 
 #include "fs_server.h"
 #include "fs_crypt.h"
+
+#include "requests.h"
+#include "BlockManager.h"
+#include "SessionManager.h"
 using namespace std;
 
 enum REQUEST_T { SESSION, READBLOCK, WRITEBLOCK, CREATE, DELETE };
@@ -25,10 +29,13 @@ void processRequest(int sockfd, char* buf, int expected);
 
 REQUEST_T getRequestType(char* rq);
 
+BlockManager blockManager;
+SessionManager sessionManager;
+
 int main(int argc, char *argv[])
 {
 /*  1. Read the list of usernames and passwords from stdin
- *  TODO: 2. Initialize the list of free disk blocks
+ *  2. Initialize the list of free disk blocks
  *  3. Set up the socket and call listen.
  */
 
@@ -39,7 +46,7 @@ int main(int argc, char *argv[])
  */
 
 
-
+//  1)
     string user;
     string password;
     while (cin >> user) {
@@ -47,9 +54,10 @@ int main(int argc, char *argv[])
         users[user] = password;
     }
 
+//  2)
+    blockManager.initialize();
 
-
-
+//  3)
     /******* SOCKET STUFF *********/
     int port_number = 0;
     if(argc > 1) {
@@ -116,7 +124,8 @@ int main(int argc, char *argv[])
         {
             case SESSION:
                cout << "Session Request\n";
-               
+               //TODO: andrew call sequenceRequest(unsigned int sequence, const char *username);
+               //see function.h for details
                break;
             case READBLOCK:
                cout << "Readblock Request\n";
