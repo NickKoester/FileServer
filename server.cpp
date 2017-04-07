@@ -27,6 +27,8 @@ void processHeader(int sockfd, char* buf, int& message_size);
 
 void processRequest(int sockfd, char* buf, int expected);
 
+unsigned int getSequenceNumber(char* msg);
+
 REQUEST_T getRequestType(char* rq);
 
 BlockManager blockManager;
@@ -123,25 +125,24 @@ int main(int argc, char *argv[])
         switch(requestType)
         {
             case SESSION:
-               cout << "Session Request\n";
-               //TODO: andrew call sequenceRequest(unsigned int sequence, const char *username);
-               //see function.h for details
-               break;
+                cout << "Session Request\n sequence number: " << getSequenceNumber(decryptd);
+                sessionRequest(getSequenceNumber(decryptd), username); 
+                break;
             case READBLOCK:
-               cout << "Readblock Request\n";
-               break;
+                cout << "Readblock Request\n";
+                break;
             case WRITEBLOCK:
-               cout << "Writeblock Request\n";
-               break;
+                cout << "Writeblock Request\n";
+                break;
             case CREATE:
-               cout << "Create Request\n";
-               break;
+                cout << "Create Request\n";
+                break;
             case DELETE:
-               cout << "Delete Request\n";
-               break;
+                cout << "Delete Request\n";
+                break;
             default:
-               cout << "Fuck\n";
-               break;
+                cout << "Fuck\n";
+                break;
         }
 
         delete [] decryptd;
@@ -201,5 +202,11 @@ REQUEST_T getRequestType(char* rq) {
     else if (type == 'W') return WRITEBLOCK;
     else if (type == 'C') return CREATE;
     else return DELETE;
+}
+
+unsigned int getSequenceNumber(char* msg) {
+    int i = 0;
+    while (!isdigit(msg[i])) ++i;
+    return atoi(msg + i + 1);
 }
 
