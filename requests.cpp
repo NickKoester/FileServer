@@ -4,6 +4,7 @@
 #include "Session.h"
 #include "SessionManager.h"
 #include "BlockManager.h"
+#include "Path.h"
 
 extern SessionManager sessionManager;
 extern BlockManager blockManager;
@@ -81,6 +82,7 @@ void deleteRequest(unsigned int /*sesh*/, unsigned int /*seq*/, const char * /*p
     //if we deleted the last direntry on the block we can deallocate the block
 
 }
+
 void sendResponse(unsigned int /*sessionNumber*/, unsigned int /*sequenceNumber*/) {
     return;
 }
@@ -116,4 +118,57 @@ fs_inode *getParentInode(const char * /*pathname*/) {
 
 fs_direntry *findEmptyDirentry(fs_inode * /*inode*/) {
     return new fs_direntry();
+}
+
+//This file returns the block number of file at the specified depth of the path
+// depth should be <= path.depth()
+uint32_t traversePath(const Path &path, int depth) {
+   //for every level of tree
+   //  lock parent inode
+   //  get parent inode
+   //  get name of next file
+   //  find child block
+   //  get child inode
+   //  lock child inode
+   //  unlock parent inode
+
+    if(depth > path.depth()) {
+        //bad shit
+    }
+    uint32_t parentBlock = 0;
+    uint32_t childBlock = 0;
+
+    //TODO: get read lock for root directory
+
+    for(int i = 0; i < depth; i++) {
+        fs_inode parentDirectory;
+        disk_readblock(parentBlock, &parentDirectory);
+
+        const char *childName = path.getNameCString(i);
+        childBlock = findBlock(&parentDirectory, childName);
+        
+        //TODO: get lock for child
+        //TODO: release lock for parent
+
+        parentBlock = childBlock;
+    }
+    return childBlock;
+}
+
+// This function finds the block that the file "name" is stored
+// requires the parent directory and the filename to find it
+uint32_t findBlock(fs_inode *parent, const char *name) {
+    for (uint32_t i = 0; i < parent->size; i++) {
+        uint32_t block = parent->blocks[i];
+        fs_direntry direntries[FS_DIRENTRIES];
+        disk_readblock(block, &direntries);
+ 
+        for(uint32_t j = 0; j < FS_DIRENTRIES; j++) {
+            fs_direntry direntry = direntries[j];
+            if(!strcmp(direntry.name, name)) {
+                return direntry.inode_block;
+            }
+        }
+    }
+    return 0;
 }
