@@ -50,3 +50,9 @@ void BlockManager::initialize() {
         }
     }
 }
+
+uint32_t BlockManager::getFreeBlock() {
+    uint32_t freeBlock = freeBlocks.front();
+    freeBlocks.pop();
+    return freeBlock;
+}
