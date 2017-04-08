@@ -17,6 +17,34 @@ unsigned int sessionRequest(unsigned int seq, const char *username) {
     return seshNum;
 }
 
+char *readBlock(unsigned int /*session*/, unsigned int /*seq*/, const char* /*username*/, const char* /*path*/, unsigned int /*block*/) {
+    //validate input
+    //  session belongs to user
+    //  sequence is sequential
+    //  username exists maybe?
+    //  path is valid
+    //  file has enough blocks
+    //
+    //get inode of file
+    //read the correct block
+    //return char* to the data
+    return NULL;
+}
+
+void writeBlock(unsigned int /*session*/, unsigned int /*seq*/, const char* /*username*/, const char* /*path*/, unsigned int /*block*/, const char* /*data*/) {
+    //validate input
+    //  session belongs to user
+    //  sequence is sequential
+    //  username exists maybe
+    //  path is valid
+    //  block refers to an existing block or one directly after the end
+    //
+    //get inode for file
+    //get the correct block (or get a new one)
+    //write the data
+    //update the inode if a new block was added
+}
+
 void createRequest(unsigned int /*sesh*/, unsigned int /*seq*/, const char *pathname, const char *username, char type) {
     //check that username is the same as the one in sesh
     //check that path exits
