@@ -105,6 +105,9 @@ int main(int argc, char *argv[])
     while (1) {
         int msg_fd = accept(sockfd, nullptr, nullptr);
 
+     //TODO -- Can we move everything below this point into a new function?
+     //        Check out requestStub.cpp
+
         char username[FS_MAXUSERNAME + 1]; // TODO: dynamic size? +1 for null
         int msg_size = 0; 
         memset(username, 0, FS_MAXUSERNAME + 1);

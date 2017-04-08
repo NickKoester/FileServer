@@ -4,6 +4,9 @@
 #include <string>
 #include <vector>
 
+//  Create an object by giving it the char *pathname and the constructor
+// turns it into a vector of strings.  This way we dont have to parse the
+// damn thing every time we want to do stuff with it.
 class Path {
 public:
    Path(const char *);
