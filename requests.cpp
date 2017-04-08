@@ -42,6 +42,17 @@ void createRequest(unsigned int /*sesh*/, unsigned int /*seq*/, const char *path
     free(name);
 }
 
+void deleteRequest(unsigned int /*sesh*/, unsigned int /*seq*/, const char * /*pathname*/, const char * /*username*/) {
+    //validate inputs
+    // make sure it has no files or subdirectories and not root directory
+    //get direntry of what we are deleting
+    //add inode_block to freeBlocks queue
+    //set inode_block to zero
+    //idk if we need to change any names
+    //
+    //if we deleted the last direntry on the block we can deallocate the block
+
+}
 void sendResponse(unsigned int /*sessionNumber*/, unsigned int /*sequenceNumber*/) {
     return;
 }
