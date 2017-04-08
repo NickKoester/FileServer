@@ -122,11 +122,12 @@ int main(int argc, char *argv[])
 
 
         REQUEST_T requestType = getRequestType(decryptd);
+        unsigned session = 0;
         switch(requestType)
         {
             case SESSION:
                 cout << "Session Request\n sequence number: " << getSequenceNumber(decryptd);
-                sessionRequest(getSequenceNumber(decryptd), username); 
+                 session = sessionRequest(getSequenceNumber(decryptd), username); 
                 break;
             case READBLOCK:
                 cout << "Readblock Request\n";
@@ -144,7 +145,9 @@ int main(int argc, char *argv[])
                 cout << "Fuck\n";
                 break;
         }
-
+        
+        //char* res = fs_encrypt(users[testuser].c_str(), uncrypt_res, uncrypt_size, sizet);
+        
         delete [] decryptd;
         delete [] msg;
         close(msg_fd);
