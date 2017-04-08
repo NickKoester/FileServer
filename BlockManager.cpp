@@ -56,3 +56,7 @@ uint32_t BlockManager::getFreeBlock() {
     freeBlocks.pop();
     return freeBlock;
 }
+
+void BlockManager::freeBlock(uint32_t block) {
+    freeBlocks.push(block);
+}

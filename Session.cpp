@@ -12,3 +12,13 @@ Session::Session(unsigned int seq, const char *user) {
 unsigned int Session::getNum() {
     return sessionNum;
 }
+
+bool Session::validate(unsigned int seq, const char *name) {
+    if (username.compare(name)) return false;
+    if (!(prevSequenceNum < seq)) return false;
+    return true;
+}
+
+void Session::updateSequenceNum(unsigned int seq) {
+    prevSequenceNum = seq;
+}

@@ -18,106 +18,152 @@ unsigned int sessionRequest(unsigned int seq, const char *username) {
     return seshNum;
 }
 
-char *readBlock(unsigned int /*session*/, unsigned int /*seq*/, const char* /*username*/, const char* /*path*/, unsigned int /*block*/) {
+char *readBlock(const char* /*username*/, const Path &path, unsigned int block) {
     //validate input
-    //  session belongs to user
-    //  sequence is sequential
-    //  username exists maybe?
+    //  session belongs to user (done)
+    //  sequence is sequential (done)
+    //  user owns file
     //  path is valid
     //  file has enough blocks
     //
     //get inode of file
     //read the correct block
     //return char* to the data
-    return NULL;
+    
+    fs_inode file_inode;
+    uint32_t file_inode_blocknum = traversePath(path, path.depth());
+
+    //TODO need reader lock on inode
+    disk_readblock(file_inode_blocknum, &file_inode);
+
+    if (file_inode.type != 'f') {
+        //TODO handle
+    }
+
+    uint32_t data_block = file_inode.blocks[block];
+    //TODO unlock inode
+    char *buffer = new char[FS_BLOCKSIZE];
+
+    //TODO need reader lock on data
+    disk_readblock(data_block, buffer);
+    //TODO unlock data
+
+    return buffer;
 }
 
-void writeBlock(unsigned int /*session*/, unsigned int /*seq*/, const char* /*username*/, const char* /*path*/, unsigned int /*block*/, const char* /*data*/) {
+void writeBlock(const char* /*username*/, const Path &path, unsigned int block, const char* data) {
     //validate input
-    //  session belongs to user
-    //  sequence is sequential
-    //  username exists maybe
-    //  path is valid
-    //  block refers to an existing block or one directly after the end
+    //  session belongs to user -> easy to make a function to check (done)
+    //  sequence is sequential -> make function to check (done)
+    //
+    //  path is valid -> done during the traversal
+    //
+    //  username owns file -> must be done after the tree is traversed
+    //  block refers to an existing block or one directly after the end -> done after traversal
     //
     //get inode for file
     //get the correct block (or get a new one)
     //write the data
     //update the inode if a new block was added
+
+    fs_inode file_inode;
+    uint32_t file_inode_blocknum = traversePath(path, path.depth());
+
+    //TODO need reader lock on inode
+    disk_readblock(file_inode_blocknum, &file_inode);
+
+    if (file_inode.type != 'f') {
+        //TODO handle error
+    }
+
+    uint32_t data_block = -1;
+    bool added = false;
+
+    if (file_inode.size < block) {
+        data_block = file_inode.blocks[block];
+    } else if (file_inode.size == block) {
+        data_block = blockManager.getFreeBlock();
+        added = true;
+    } else {
+        //TODO handle error
+    }
+
+    disk_writeblock(data_block, data);
+
+    if (added) {
+      file_inode.blocks[file_inode.size] = data_block;
+      file_inode.size++;
+      disk_writeblock(file_inode_blocknum, &file_inode);
+    }
 }
 
-void createRequest(unsigned int /*sesh*/, unsigned int /*seq*/, const char *pathname, const char *username, char type) {
-    //check that username is the same as the one in sesh
+void createRequest(const char *username, const Path &path, char type) {
+    //check that username is the same as the one in sesh (done)
+    //check seq number is valid (done)
     //check that path exits
     //check that there are free blocks
-    //check seq number is valid
 
     uint32_t block = blockManager.getFreeBlock();
     fs_inode inode;
+
     inode.type = type;
     strcpy(inode.owner, username);
     inode.size = 0;
 
     disk_writeblock(block, &inode);
 
-    char *name = getName(pathname);
+    //const char *name = path.getNameCString(path.depth());
 
-    fs_inode *parent = getParentInode(pathname);
-    fs_direntry* direntry = findEmptyDirentry(parent);
+    uint32_t parent_inode_blocknum = traversePath(path, path.depth() - 1);
+    disk_readblock(parent_inode_blocknum, &inode);
 
-    strcpy(direntry->name, name);
-    direntry->inode_block = block;
+    //TODO below here still needs work (mainly the stuff with finding the direntry block and stuff)
+    //update direntry to store "block"
 
-    free(name);
+    //uint32_t direntry_blocknum
+
+    //strcpy(direntry->name, name);
+    //direntry->inode_block = block;
+
+    //free(name);
 }
 
-void deleteRequest(unsigned int /*sesh*/, unsigned int /*seq*/, const char * /*pathname*/, const char * /*username*/) {
+void deleteRequest(const char * /*username*/, const Path &/*path*/) {
     //validate inputs
-    // make sure it has no files or subdirectories and not root directory
+    //  check that session belong to user (done)
+    //  check that sequence number is sequential (done)
+    //
+    //  check that path is valid
+    //
+    //  check that username owns file
+    //  check that it has no files or subdirectories and not root directory
+    //
     //get direntry of what we are deleting
     //add inode_block to freeBlocks queue
     //set inode_block to zero
     //idk if we need to change any names
     //
     //if we deleted the last direntry on the block we can deallocate the block
+    
+    uint32_t file_inode_blocknum = 0;
+    fs_inode file_inode;
 
+    //fs_direntry direntry;
+
+    //direntry.inode_block = 0;
+
+    //if directory data block is now empty we have to free
+    
+    for (uint32_t i = 0; i < file_inode.size; i++) {
+        blockManager.freeBlock(file_inode.blocks[i]);
+    }
+
+    blockManager.freeBlock(file_inode_blocknum);
+    //TODO need to write changes back to disk
 }
 
 void sendResponse(unsigned int /*sessionNumber*/, unsigned int /*sequenceNumber*/) {
     return;
-}
-
-char *getName(const char *pathname) {
-// path name is /nick/stuff/porn/video
-// should return video
-// you are responsible for freeing name
-
-    int nameStart = 0;
-    int i = 0;
-    while (pathname[i]) {
-        if(pathname[i] == '/') {
-            nameStart = i + 1;
-        }
-        ++i;
-    }
-
-    char *name = strdup(pathname + nameStart);
-    return name;
-}
-
-fs_inode *getParentInode(const char * /*pathname*/) {
-// pathname is /nick/stuff/porn/video
-// should return inode of porn
-
-    fs_inode dir;
-    disk_readblock(0, &dir);
-
-    
-    return new fs_inode();
-}
-
-fs_direntry *findEmptyDirentry(fs_inode * /*inode*/) {
-    return new fs_direntry();
 }
 
 //This file returns the block number of file at the specified depth of the path

@@ -6,6 +6,8 @@ class Session {
 public:
     Session(unsigned int seq, const char *username);
     unsigned int getNum();
+    bool validate(unsigned int seq, const char *username);
+    void updateSequenceNum(unsigned int seq);
 
 private:
     std::string username;
