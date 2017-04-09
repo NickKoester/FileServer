@@ -122,6 +122,7 @@ fs_direntry *findEmptyDirentry(fs_inode * /*inode*/) {
 
 //This file returns the block number of file at the specified depth of the path
 // depth should be <= path.depth()
+// NOTE: reader lock of the inode you want will be aquired when this returns
 uint32_t traversePath(const Path &path, int depth) {
    //for every level of tree
    //  lock parent inode
