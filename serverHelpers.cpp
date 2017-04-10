@@ -1,4 +1,5 @@
 #include "serverHelpers.h"
+#include "requests.h"
 #include <iostream>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -7,7 +8,7 @@
 #include <string>
 using namespace std;
 
-void requestHandler(int sockfd) {
+void requestHandler(int sockfd, const unordered_map<string, string> &users) {
 
     char username[FS_MAXUSERNAME + 1]; // TODO: dynamic size? +1 for null
     int msg_size = 0; 
