@@ -6,6 +6,7 @@
 #include "BlockManager.h"
 #include "Path.h"
 
+using std::string;
 extern SessionManager sessionManager;
 extern BlockManager blockManager;
 
@@ -18,7 +19,7 @@ unsigned int sessionRequest(unsigned int seq, const char *username) {
     return seshNum;
 }
 
-char *readBlock(const char* /*username*/, const Path &path, unsigned int block) {
+char *readRequest(const char* /*username*/, const Path &path, unsigned int block) {
     //validate input
     //  session belongs to user (done)
     //  sequence is sequential (done)
@@ -51,7 +52,7 @@ char *readBlock(const char* /*username*/, const Path &path, unsigned int block) 
     return buffer;
 }
 
-void writeBlock(const char* /*username*/, const Path &path, unsigned int block, const char* data) {
+void writeRequest(const char* /*username*/, const Path &path, unsigned int block, const char* data) {
     //validate input
     //  session belongs to user -> easy to make a function to check (done)
     //  sequence is sequential -> make function to check (done)
@@ -69,7 +70,7 @@ void writeBlock(const char* /*username*/, const Path &path, unsigned int block, 
     fs_inode file_inode;
     uint32_t file_inode_blocknum = traversePath(path, path.depth());
 
-    //TODO need reader lock on inode
+    //need reader lock on inode
     disk_readblock(file_inode_blocknum, &file_inode);
 
     if (file_inode.type != 'f') {
@@ -252,26 +253,47 @@ exit:
     blockManager.freeBlock(data_block);
 }
 
-void sendResponse(unsigned int /*sessionNumber*/, unsigned int /*sequenceNumber*/) {
-    return;
+// creates the <sessionnumber> <sequencenumber><NULL>(<data> if readblock)
+// returns size of this response
+// expects caller to free the response
+char* createResponse(unsigned int sessionNumber, unsigned int sequenceNumber, const char * data, unsigned &response_size) {
+    string response = sessionNumber + " " + sequenceNumber;
+    char* res;
+
+    if (data == nullptr) {
+        response_size = response.size() + 1;
+        res = new char[response_size];
+        strcpy(res, response.c_str());
+    } 
+    else {
+        string tmp(data);
+        response_size = response.size() + tmp.size() + 1;
+        res = new char[response_size];
+
+        unsigned i;
+        for (i=0; i<response.size(); ++i) {
+            res[i] = response[i];
+        }
+        
+        res[i++] = '\0';
+
+        for (unsigned k=0; k<tmp.size(); ++k) {
+            res[i + k] = tmp[k];
+        }
+    }
+
+    return res;
 }
 
 //This file returns the block number of file at the specified depth of the path
 // depth should be <= path.depth()
 // NOTE: reader lock of the inode you want will be aquired when this returns
 uint32_t traversePath(const Path &path, int depth) {
-   //for every level of tree
-   //  lock parent inode
-   //  get parent inode
-   //  get name of next file
-   //  find child block
-   //  get child inode
-   //  lock child inode
-   //  unlock parent inode
 
     if(depth > path.depth()) {
         //bad shit
     }
+
     uint32_t parentBlock = 0;
     uint32_t childBlock = 0;
 
