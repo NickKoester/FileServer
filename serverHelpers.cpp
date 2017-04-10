@@ -7,6 +7,56 @@
 #include <string>
 using namespace std;
 
+void requestHandler() {
+
+    char username[FS_MAXUSERNAME + 1]; // TODO: dynamic size? +1 for null
+    int msg_size = 0; 
+    memset(username, 0, FS_MAXUSERNAME + 1);
+        
+    processHeader(msg_fd, username, msg_size);
+       
+    char* msg = new char[msg_size]; //TODO: do we need msg_size+1???
+    processRequest(msg_fd, msg, msg_size);
+
+    string testuser(username);
+    unsigned int* sizet = new unsigned int[1];
+    char* decryptd = static_cast<char*>(fs_decrypt(users[testuser].c_str(), msg, msg_size, sizet));
+
+    if (decryptd == nullptr) close(msg_fd);
+
+
+    REQUEST_T requestType = getRequestType(decryptd);
+    //unsigned session = 0;   Andrew what is this for?
+    switch(requestType)
+    {
+        case SESSION:
+            cout << "Session Request\n sequence number: " << getSequenceNumber(decryptd);
+            sessionRequest(getSequenceNumber(decryptd), username); 
+            break;
+        case READBLOCK:
+            cout << "Readblock Request\n";
+            break;
+        case WRITEBLOCK:
+            cout << "Writeblock Request\n";
+            break;
+        case CREATE:
+            cout << "Create Request\n";
+            break;
+        case DELETE:
+            cout << "Delete Request\n";
+            break;
+        default:
+            cout << "Fuck\n";
+            break;
+        }
+        
+        //char* res = fs_encrypt(users[testuser].c_str(), uncrypt_res, uncrypt_size, sizet);
+        
+    delete [] decryptd;
+    delete [] msg;
+    close(msg_fd);
+}
+
 void initializeUsers(std::unordered_map<std::string, std::string> &users) {
     string user;
     string password;
