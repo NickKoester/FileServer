@@ -70,7 +70,9 @@ int main(int argc, char *argv[])
 
     /********* SERVER STUFF *******/
     while (1) {
-        int msg_fd = accept(sockfd, nullptr, nullptr);
+        if (accept(sockfd, nullptr, nullptr) == -1) {
+            // throw error
+        }
         thread(requestHandler).join();
     }
        
