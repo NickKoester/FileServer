@@ -7,22 +7,22 @@
 #include <string>
 using namespace std;
 
-void requestHandler() {
+void requestHandler(int sockfd) {
 
     char username[FS_MAXUSERNAME + 1]; // TODO: dynamic size? +1 for null
     int msg_size = 0; 
     memset(username, 0, FS_MAXUSERNAME + 1);
         
-    processHeader(msg_fd, username, msg_size);
+    processHeader(sockfd, username, msg_size);
        
     char* msg = new char[msg_size]; //TODO: do we need msg_size+1???
-    processRequest(msg_fd, msg, msg_size);
+    processRequest(sockfd, msg, msg_size);
 
     string testuser(username);
     unsigned int* sizet = new unsigned int[1];
     char* decryptd = static_cast<char*>(fs_decrypt(users[testuser].c_str(), msg, msg_size, sizet));
 
-    if (decryptd == nullptr) close(msg_fd);
+    if (decryptd == nullptr) close(sockfd);
 
 
     REQUEST_T requestType = getRequestType(decryptd);
@@ -54,7 +54,7 @@ void requestHandler() {
         
     delete [] decryptd;
     delete [] msg;
-    close(msg_fd);
+    close(sockfd);
 }
 
 void initializeUsers(std::unordered_map<std::string, std::string> &users) {

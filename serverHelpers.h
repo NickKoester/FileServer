@@ -9,7 +9,7 @@ enum REQUEST_T { SESSION, READBLOCK, WRITEBLOCK, CREATE, DELETE };
 
 const int MAX_HEADER_SIZE = (sizeof(char) * FS_MAXUSERNAME) + sizeof(unsigned) + sizeof(char);
 
-void requestHandler();
+void requestHandler(int sockfd);
 
 void initializeUsers(std::unordered_map<std::string, std::string> &users);
 
