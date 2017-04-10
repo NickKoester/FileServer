@@ -4,12 +4,12 @@
 #include <unordered_map>
 #include "fs_server.h"
 
-
+extern std::unordered_map<std::string, std::string> users;
 enum REQUEST_T { SESSION, READBLOCK, WRITEBLOCK, CREATE, DELETE };
 
 const int MAX_HEADER_SIZE = (sizeof(char) * FS_MAXUSERNAME) + sizeof(unsigned) + sizeof(char);
 
-void requestHandler(int sockfd, const unordered_map<string, string> &users);
+void requestHandler(int sockfd);
 
 void initializeUsers(std::unordered_map<std::string, std::string> &users);
 

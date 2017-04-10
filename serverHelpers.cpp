@@ -8,7 +8,7 @@
 #include <string>
 using namespace std;
 
-void requestHandler(int sockfd, const unordered_map<string, string> &users) {
+void requestHandler(int sockfd) {
 
     char username[FS_MAXUSERNAME + 1]; // TODO: dynamic size? +1 for null
     int msg_size = 0; 
