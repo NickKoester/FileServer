@@ -4,6 +4,8 @@
 #include <unordered_map>
 #include "fs_server.h"
 #include "Path.h"
+#include "Request.h"
+
 
 extern std::unordered_map<std::string, std::string> users;
 
@@ -34,6 +36,6 @@ REQUEST_T getRequestType(char* rq);
 
 int createCleartextHeader(char* buf, unsigned int s);
 
-char* encryptResponse(char* password, char* plaintext, int plaintext_size, unsigned int * encrypted_size);
+char* encryptResponse(const char* password, char* plaintext, int plaintext_size, unsigned int * encrypted_size);
 
 #endif

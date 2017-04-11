@@ -1,58 +1,63 @@
 #ifndef __REQUEST_H__
 #define __REQUEST_H__
-#include "fs_server.h"
+
+#include "Path.h"
 
 enum REQUEST_T { SESSION, READBLOCK, WRITEBLOCK, CREATE, DELETE };
 
 class Request {
 public:
-	Request(int in_sockfd);
+    Request(int in_sockfd);
 
-	void parseHeader();
+    void parseHeader();
 
-	void parseRequestAndDecrypt(char* password);
+    void parseRequestAndDecrypt(const char* password);
 
-	void parseRequestParameters();
+    void parseRequestParameters();
 
-	unsigned getSession();
+    unsigned getSession();
 
-	void setSession(unsigned ses);
+    void setSession(unsigned ses);
 
-	unsigned getSequence();
+    unsigned getSequence();
 
-	Path* getPath();
+    Path* getPath();
 
-	unsigned getBlock();
+    unsigned getBlock();
 
-	char* getData();
+    char* getData();
 
-	std::string getUsername();
+    std::string getUsername();
 
-	void sendResponse(char* text, unsigned size);
+    void sendResponse(char* text, unsigned size);
 
-	~Request();
+    REQUEST_T getRequestType();
+ 
+    char getType();
+
+    ~Request();
 
 private:
-	int sockfd;
-	std::string username;
+    int sockfd;
+    std::string username;
 
     char* request;
     int request_size;
-	int encrypted_request_size;
+    int encrypted_request_size;
 
-	Path path;
-	REQUEST_T request_type;
-	unsigned session;
-	unsigned sequence;
-	unsigned block;
-	char type;
-	char* data;
+    Path* path;
+    REQUEST_T request_type;
+    unsigned session;
+    unsigned sequence;
+    unsigned block;
+    char type;
+    char* data;
 
-    void decryptRequest(char* password, char* encrypted);
+    void decryptRequest(const char* password, char* encrypted);
 
     REQUEST_T parseRequestType();
 
     int getNextInteger(int &index);
-}
+};
 
 #endif    

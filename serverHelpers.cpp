@@ -1,6 +1,5 @@
 #include "serverHelpers.h"
 #include "requests.h"
-#include "Request.h"
 #include <iostream>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -16,12 +15,12 @@ void requestHandler(int sockfd) {
     request.parseHeader();
 
     // very important that this is not before request.parseHeader();
-    char* password = users[request.getUsername()].c_str(); 
+    const char* password = users[request.getUsername()].c_str(); 
     request.parseRequestAndDecrypt(password);
     
     request.parseRequestParameters();
 
-    switch(request.requestType)
+    switch(request.getRequestType())
     {
         case SESSION:
             cout << "Session Request\n";
@@ -63,10 +62,10 @@ void requestHandler(int sockfd) {
     int cleartextSize = createCleartextHeader(cleartext, *encrypted_size);
 
     // CLEARTEXT HEADER
-    request.sendResponse(cleartext, cleartextSize, 0);
+    request.sendResponse(cleartext, cleartextSize);
 
     // ENCRYPTED RESPONSE
-    request.sendResponse(encrypted_response, *encrypted_size, 0);
+    request.sendResponse(encrypted_response, *encrypted_size);
 
     delete [] encrypted_size;
     delete [] res;
@@ -87,6 +86,6 @@ int createCleartextHeader(char* buf, unsigned int s) {
     return sprintf(buf, "%d", s) + 1; // + 1 to include '\0'
 }
 
-char* encryptResponse(char* password, char* plaintext, int plaintext_size, unsigned int * encrypted_size) {
+char* encryptResponse(const char* password, char* plaintext, int plaintext_size, unsigned int * encrypted_size) {
     return static_cast<char*>(fs_encrypt(password, plaintext, plaintext_size, encrypted_size));
 }

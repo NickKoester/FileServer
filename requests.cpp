@@ -43,7 +43,7 @@ char *readRequest(Request *request) {
         //TODO handle
     }
 
-    uint32_t data_block = file_inode.blocks[block];
+    uint32_t data_block = file_inode.blocks[request->getBlock()];
     //TODO unlock inode
     char *buffer = new char[FS_BLOCKSIZE];
 
@@ -113,7 +113,7 @@ void createRequest(Request *request) {
     uint32_t block = blockManager.getFreeBlock();
     fs_inode inode;
 
-    inode.type = request->type;
+    inode.type = request->getType();
     strcpy(inode.owner, request->getUsername().c_str());
     inode.size = 0;
 
