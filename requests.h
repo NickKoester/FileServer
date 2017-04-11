@@ -2,14 +2,21 @@
 #define REQUESTS_H
 
 #include "Path.h"
+#include "Request.h"
 #define DIRENTRIES_PER_BLOCK FS_BLOCKSIZE / sizeof(fs_direntry)
 
-unsigned int sessionRequest(unsigned int seq, const char *username);
-void createRequest(const char *username, const Path &path, char type);
-void writeRequest(const char* username, const Path &path, unsigned int block, const char* data);
-char *readRequest(const char* username, const Path &path, unsigned int block);
-char *createResponse(unsigned int sesh, unsigned int seq, const char *, unsigned &response_size);
-void deleteRequest(const char * username, const Path &path);
+void sessionRequest(Request *request);
+
+void createRequest(Request *request);
+
+void writeRequest(Request *request);
+
+char *readRequest(Request *request);
+
+void deleteRequest(Request *request);
+
+char *createResponse(Request *request, unsigned &response_size);
+
 char *getName(const char *pathname);
 fs_inode *getParentInode(const char *pathname);
 fs_direntry *findEmptyDirentry(fs_inode *inode);

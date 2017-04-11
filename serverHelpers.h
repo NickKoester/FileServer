@@ -6,9 +6,7 @@
 #include "Path.h"
 
 extern std::unordered_map<std::string, std::string> users;
-enum REQUEST_T { SESSION, READBLOCK, WRITEBLOCK, CREATE, DELETE };
 
-const int MAX_HEADER_SIZE = (sizeof(char) * FS_MAXUSERNAME) + sizeof(unsigned) + sizeof(char);
 
 void requestHandler(int sockfd);
 
@@ -35,5 +33,7 @@ char *getData(char *msg);
 REQUEST_T getRequestType(char* rq);
 
 int createCleartextHeader(char* buf, unsigned int s);
+
+char* encryptResponse(char* password, char* plaintext, int plaintext_size, unsigned int * encrypted_size);
 
 #endif

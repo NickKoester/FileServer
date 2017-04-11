@@ -10,16 +10,16 @@ using std::string;
 extern SessionManager sessionManager;
 extern BlockManager blockManager;
 
-unsigned int sessionRequest(unsigned int seq, const char *username) {
-    Session *newSesh = new Session(seq, username);
+void sessionRequest(Request *request) {
+    Session *newSesh = new Session(request->getSequence(), request->getUsername().c_str());
 
     unsigned int seshNum = newSesh->getNum();
 
     sessionManager.add(seshNum, newSesh);
-    return seshNum;
+    request->setSession(seshNum);
 }
 
-char *readRequest(const char* /*username*/, const Path &path, unsigned int block) {
+char *readRequest(Request *request) {
     //validate input
     //  session belongs to user (done)
     //  sequence is sequential (done)
@@ -32,7 +32,9 @@ char *readRequest(const char* /*username*/, const Path &path, unsigned int block
     //return char* to the data
     
     fs_inode file_inode;
-    uint32_t file_inode_blocknum = traversePath(path, path.depth());
+
+    Path *path = request->getPath();
+    uint32_t file_inode_blocknum = traversePath(*path, path->depth());
 
     //TODO need reader lock on inode
     disk_readblock(file_inode_blocknum, &file_inode);
@@ -52,7 +54,7 @@ char *readRequest(const char* /*username*/, const Path &path, unsigned int block
     return buffer;
 }
 
-void writeRequest(const char* /*username*/, const Path &path, unsigned int block, const char* data) {
+void writeRequest(Request *request) {
     //validate input
     //  session belongs to user -> easy to make a function to check (done)
     //  sequence is sequential -> make function to check (done)
@@ -68,7 +70,9 @@ void writeRequest(const char* /*username*/, const Path &path, unsigned int block
     //update the inode if a new block was added
 
     fs_inode file_inode;
-    uint32_t file_inode_blocknum = traversePath(path, path.depth());
+
+    Path *path = request->getPath();
+    uint32_t file_inode_blocknum = traversePath(*path, path->depth());
 
     //need reader lock on inode
     disk_readblock(file_inode_blocknum, &file_inode);
@@ -80,6 +84,8 @@ void writeRequest(const char* /*username*/, const Path &path, unsigned int block
     uint32_t data_block = -1;
     bool added = false;
 
+    unsigned block = request->getBlock();
+
     if (file_inode.size < block) {
         data_block = file_inode.blocks[block];
     } else if (file_inode.size == block) {
@@ -89,7 +95,7 @@ void writeRequest(const char* /*username*/, const Path &path, unsigned int block
         //TODO handle error
     }
 
-    disk_writeblock(data_block, data);
+    disk_writeblock(data_block, request->getData());
 
     if (added) {
       file_inode.blocks[file_inode.size] = data_block;
@@ -98,7 +104,7 @@ void writeRequest(const char* /*username*/, const Path &path, unsigned int block
     }
 }
 
-void createRequest(const char *username, const Path &path, char type) {
+void createRequest(Request *request) {
     //check that username is the same as the one in sesh (done)
     //check seq number is valid (done)
     //check that path exits
@@ -107,21 +113,23 @@ void createRequest(const char *username, const Path &path, char type) {
     uint32_t block = blockManager.getFreeBlock();
     fs_inode inode;
 
-    inode.type = type;
-    strcpy(inode.owner, username);
+    inode.type = request->type;
+    strcpy(inode.owner, request->getUsername().c_str());
     inode.size = 0;
 
     //Write file inode to disk
     disk_writeblock(block, &inode);
 
-    uint32_t parent_inode_block = traversePath(path, path.depth() - 1);
+    Path *path = request->getPath();
+    uint32_t parent_inode_block = traversePath(*path, path->depth() - 1);
+
     disk_readblock(parent_inode_block, &inode);
 
-    const char *name = path.getNameCString(path.depth());
+    const char *name = path->getNameCString(path->depth());
     addDirentry(&inode, parent_inode_block, name, block);
 }
 
-void deleteRequest(const char * /*username*/, const Path &path) {
+void deleteRequest(Request *request) {
     //validate inputs
     //  check that session belong to user (done)
     //  check that sequence number is sequential (done)
@@ -147,8 +155,9 @@ void deleteRequest(const char * /*username*/, const Path &path) {
     //
     //STATE: done
 
-    uint32_t file_inode_block = traversePath(path, path.depth());
-    uint32_t dir_inode_block = traversePath(path, path.depth() - 1);
+    Path *path = request->getPath();
+    uint32_t file_inode_block = traversePath(*path, path->depth());
+    uint32_t dir_inode_block = traversePath(*path, path->depth() - 1);
     fs_inode inode;
 
     disk_readblock(dir_inode_block, &inode);
@@ -256,17 +265,18 @@ exit:
 // creates the <sessionnumber> <sequencenumber><NULL>(<data> if readblock)
 // returns size of this response
 // expects caller to free the response
-char* createResponse(unsigned int sessionNumber, unsigned int sequenceNumber, const char * data, unsigned &response_size) {
-    string response = std::to_string(sessionNumber) + " " + std::to_string(sequenceNumber);
+char* createResponse(Request *request, unsigned &response_size) {
+    string response = std::to_string(request->getSession()) + " " +
+                      std::to_string(request->getSequence());
     char* res;
 
-    if (data == nullptr) {
+    if (request->getData() == nullptr) {
         response_size = response.size() + 1;
         res = new char[response_size];
         strcpy(res, response.c_str());
     } 
     else {
-        string tmp(data);
+        string tmp(request->getData());
         response_size = response.size() + tmp.size() + 1;
         res = new char[response_size];
 
