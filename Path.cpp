@@ -5,6 +5,11 @@ using namespace std;
 Path::Path(const char *pathname) {
     int nameIdx = 0;
     bool done = false;
+
+    if(!pathname || !pathname[0]) {
+        return;
+    }
+
     while(!done) {
         char name[FS_MAXFILENAME + 1];
         int i = 0;

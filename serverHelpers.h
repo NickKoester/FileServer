@@ -3,6 +3,7 @@
 
 #include <unordered_map>
 #include "fs_server.h"
+#include "Path.h"
 
 extern std::unordered_map<std::string, std::string> users;
 enum REQUEST_T { SESSION, READBLOCK, WRITEBLOCK, CREATE, DELETE };
@@ -19,10 +20,18 @@ void processHeader(int sockfd, char* buf, int& message_size);
 
 void processRequest(int sockfd, char* buf, int expected);
 
+unsigned int getSessionNumber(char* msg);
+
 unsigned int getSequenceNumber(char* msg);
 
+Path getPathname(char *msg);
+
+unsigned int getBlockNum(char *msg);
+
+char getType(char *msg);
+
+char *getData(char *msg);
+
 REQUEST_T getRequestType(char* rq);
-
-
 
 #endif
