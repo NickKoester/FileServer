@@ -68,7 +68,6 @@ void requestHandler(int sockfd) {
             break;
     }
         
-    //char* res = fs_encrypt(users[testuser].c_str(), uncrypt_res, uncrypt_size, sizet);
     unsigned response_size = 0;
     char* res = createResponse(sessionNum, sequenceNum, data, response_size); 
 
