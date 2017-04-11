@@ -17,7 +17,7 @@ void requestHandler(int sockfd) {
     // very important that this is not before request.parseHeader();
     const char* password = users[request.getUsername()].c_str(); 
     request.parseRequestAndDecrypt(password);
-    
+   
     request.parseRequestParameters();
 
     switch(request.getRequestType())

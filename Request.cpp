@@ -15,6 +15,7 @@ const int MAX_HEADER_SIZE = (sizeof(char) * FS_MAXUSERNAME) + sizeof(unsigned) +
 
 Request::Request(int in_sockfd) {
     sockfd = in_sockfd;
+    path = nullptr;
     data = nullptr;
 }
 
@@ -72,8 +73,6 @@ void Request::parseHeader() {
         	endOfUsername = i;
         	username = header;
         	username.pop_back();
-            //strncpy(username, buffer, i); // copy username into buf
-            //username[i] = '\0'; // strncpy does not null-terminate  
         } 
         i += received;
     }
@@ -164,5 +163,6 @@ REQUEST_T Request::getRequestType() {
 
 Request::~Request() {
     delete [] request;
-    delete path;
+    if (path) delete path;
 }
+
