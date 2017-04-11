@@ -3,7 +3,6 @@
 
 #include "Path.h"
 #include "Request.h"
-#define DIRENTRIES_PER_BLOCK FS_BLOCKSIZE / sizeof(fs_direntry)
 
 void sessionRequest(Request *request);
 

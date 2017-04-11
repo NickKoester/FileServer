@@ -188,7 +188,7 @@ void addDirentry(fs_inode *dir_inode, const uint32_t dir_inode_block, const char
 
         //Checks if there is a free direntry entry in current block, where
         //a free direntry is one where inode_block is 0
-        for (uint32_t j = 0; j < DIRENTRIES_PER_BLOCK; j++) {
+        for (uint32_t j = 0; j < FS_DIRENTRIES; j++) {
             if (!block_buffer[j].inode_block) {
                 found = true;
                 direntry_idx = j;
@@ -234,7 +234,7 @@ void removeDirentry(fs_inode *dir_inode, const uint32_t dir_inode_block, const u
         disk_readblock(data_block, block_buffer);
 
         //Checks if the direntry is in the block in block_buffer
-        for (uint32_t j = 0; j < DIRENTRIES_PER_BLOCK; j++) {
+        for (uint32_t j = 0; j < FS_DIRENTRIES; j++) {
             if (block_buffer[j].inode_block == file_block) {
                 block_buffer[j].inode_block = 0;
                 direntry_idx = i;
@@ -245,7 +245,7 @@ void removeDirentry(fs_inode *dir_inode, const uint32_t dir_inode_block, const u
 
 exit:
     //If the direntry block is now empty, it must be removed from the directory inode
-    for (uint32_t i = 0; i < DIRENTRIES_PER_BLOCK; i++) {
+    for (uint32_t i = 0; i < FS_DIRENTRIES; i++) {
         if (block_buffer[i].inode_block != 0) empty = false;
     }
 
