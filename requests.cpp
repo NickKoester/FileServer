@@ -6,6 +6,7 @@
 #include "BlockManager.h"
 #include "Path.h"
 
+using std::string;
 extern SessionManager sessionManager;
 extern BlockManager blockManager;
 

@@ -73,9 +73,9 @@ void requestHandler(int sockfd) {
     char* res = createResponse(sessionNum, sequenceNum, data, response_size); 
 
     unsigned int* encrypted_size = new unsigned int[1];
-    char* encrypted_response = fs_encrypt(users[user].c_str(), res, response_size, encrypted_size);
+    char* encrypted_response = static_cast<char*>(fs_encrypt(users[user].c_str(), res, response_size, encrypted_size));
 
-    send(sockfd, encrypted_response, encrypted_size, 0);
+    send(sockfd, encrypted_response, *encrypted_size, 0);
 
         
     delete [] decrypted;
@@ -108,7 +108,6 @@ int getIncomingRequestSize(const char *buff) {
 void processHeader(int sockfd, char* buf, int& message_size) {
     char buffer[MAX_HEADER_SIZE];
     int i = 0;
-    int size_of_username = 0;
 
     // receive 1 byte at a time until we get the whole header
     // receiving a ' ' denotes we have reached end of username
