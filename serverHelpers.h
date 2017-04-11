@@ -14,7 +14,7 @@ void requestHandler(int sockfd);
 
 void initializeUsers(std::unordered_map<std::string, std::string> &users);
 
-int getMessageLength(const char*);
+int getIncomingRequestSize(const char*);
 
 void processHeader(int sockfd, char* buf, int& message_size);
 

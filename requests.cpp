@@ -162,8 +162,36 @@ void deleteRequest(const char * /*username*/, const Path &/*path*/) {
     //TODO need to write changes back to disk
 }
 
-void sendResponse(unsigned int /*sessionNumber*/, unsigned int /*sequenceNumber*/, const char * /*data*/) {
-    return;
+// creates the <sessionnumber> <sequencenumber><NULL>(<data> if readblock)
+// returns size of this response
+// expects caller to free the response
+char* createResponse(unsigned int sessionNumber, unsigned int sequenceNumber, const char * data, unsigned &response_size) {
+    string response = sessionNumber + " " + sequenceNumber;
+    char* res;
+
+    if (data == nullptr) {
+        response_size = response.size() + 1;
+        res = new char[response_size];
+        strcpy(res, response.c_str());
+    } 
+    else {
+        string tmp(data);
+        response_size = response.size() + tmp.size() + 1;
+        res = new char[response_size];
+
+        unsigned i;
+        for (i=0; i<response.size(); ++i) {
+            res[i] = response[i];
+        }
+        
+        res[i++] = '\0';
+
+        for (unsigned k=0; k<tmp.size(); ++k) {
+            res[i + k] = tmp[k];
+        }
+    }
+
+    return res;
 }
 
 //This file returns the block number of file at the specified depth of the path
