@@ -34,4 +34,6 @@ char *getData(char *msg);
 
 REQUEST_T getRequestType(char* rq);
 
+int createCleartextHeader(char* buf, unsigned int s);
+
 #endif

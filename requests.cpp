@@ -257,7 +257,7 @@ exit:
 // returns size of this response
 // expects caller to free the response
 char* createResponse(unsigned int sessionNumber, unsigned int sequenceNumber, const char * data, unsigned &response_size) {
-    string response = sessionNumber + " " + sequenceNumber;
+    string response = std::to_string(sessionNumber) + " " + std::to_string(sequenceNumber);
     char* res;
 
     if (data == nullptr) {

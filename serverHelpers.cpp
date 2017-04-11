@@ -14,7 +14,7 @@ void requestHandler(int sockfd) {
     
     int msg_size = 0; 
     processHeader(sockfd, username, msg_size);
-       
+
     char* msg = new char[msg_size]; //TODO: do we need msg_size+1???
     processRequest(sockfd, msg, msg_size);
 
@@ -24,21 +24,18 @@ void requestHandler(int sockfd) {
 
     if (decrypted == nullptr) close(sockfd);
 
-
     REQUEST_T    requestType = getRequestType(decrypted);
     unsigned int sessionNum  = getSessionNumber(decrypted);
     unsigned int sequenceNum = getSequenceNumber(decrypted);
     unsigned int blockNum    = getBlockNum(decrypted);
-
     Path path = getPathname(decrypted);
-
     // the return data for READBLOCK
     char *data = nullptr;
 
     switch(requestType)
     {
         case SESSION:
-            cout << "Session Request\n sequence number: " << sequenceNum << '\n';
+            cout << "Session Request\n";
             sessionNum = sessionRequest(sequenceNum, username); 
             break;
 
@@ -74,6 +71,12 @@ void requestHandler(int sockfd) {
     unsigned int* encrypted_size = new unsigned int[1];
     char* encrypted_response = static_cast<char*>(fs_encrypt(users[user].c_str(), res, response_size, encrypted_size));
 
+    char cleartext[11];
+    int cleartextSize = createCleartextHeader(cleartext, *encrypted_size);
+    // CLEARTEXT HEADER
+    send(sockfd, cleartext, cleartextSize, 0);
+
+    // ENCRYPTED RESPONSE
     send(sockfd, encrypted_response, *encrypted_size, 0);
 
         
@@ -162,6 +165,7 @@ Path getPathname(char *msg) {
         if (msg[i] == ' ') {
             ++spaceCount;
         }
+        ++i;
     }
 
     //the assumption here is that we dont really care about
@@ -216,3 +220,6 @@ REQUEST_T getRequestType(char* rq) {
     else return DELETE;
 }
 
+int createCleartextHeader(char* buf, unsigned int s) {
+    return sprintf(buf, "%d", s) + 1; // + 1 to include '\0'
+}

@@ -67,11 +67,11 @@ int main(int argc, char *argv[])
     cout << "\n@@@ port " << ntohs(addr.sin_port) << endl;
 
     listen(sockfd, 10);
-
     /********* SERVER STUFF *******/
     while (1) {
         int msg_fd = accept(sockfd, nullptr, nullptr);
-        thread(requestHandler, msg_fd).join();
+        //thread(requestHandler, msg_fd).join();
+        requestHandler(msg_fd);
     }
        
     return 0;
