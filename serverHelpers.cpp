@@ -69,6 +69,7 @@ void requestHandler(int sockfd) {
 
     delete [] encrypted_size;
     delete [] res;
+    delete [] encrypted_response;
     close(sockfd);
 }
 
