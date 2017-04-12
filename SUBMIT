@@ -2,8 +2,6 @@ BlockManager.cpp
 BlockManager.h
 Path.cpp
 Path.h
-RWLock.cpp
-RWLock.h
 Request.cpp
 Request.h
 Session.cpp
