@@ -5,7 +5,9 @@
 #include "SessionManager.h"
 #include "BlockManager.h"
 #include "Path.h"
-
+#include <iostream>
+using std::cout;
+using std::endl;
 using std::string;
 extern SessionManager sessionManager;
 extern BlockManager blockManager;
@@ -288,14 +290,14 @@ char* createResponse(Request *request, unsigned &response_size) {
         for (i=0; i<response.size(); ++i) {
             res[i] = response[i];
         }
-        
         res[i++] = '\0';
 
-        for (unsigned k=0; k<tmp.size(); ++k) {
+        unsigned k;
+        for (k=0; k<tmp.size(); ++k) {
             res[i + k] = tmp[k];
+            if (k == 0) cout << res[i + k];
         }
     }
-
     return res;
 }
 
