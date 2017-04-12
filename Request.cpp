@@ -190,6 +190,6 @@ void Request::initializeData() {
 Request::~Request() {
     delete [] request;
     if (path) delete path;
-    if (data) delete data;
+    if (data) delete []data;
 }
 
