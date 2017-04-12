@@ -183,7 +183,7 @@ REQUEST_T Request::getRequestType() {
     return request_type;
 }
 
-void initializeData() {
+void Request::initializeData() {
     data = new char[FS_BLOCKSIZE];
 }
 
