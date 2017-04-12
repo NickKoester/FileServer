@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <cstring>
 #include <iostream>
+#include <cassert>
 
 #include "fs_server.h"
 
@@ -116,32 +117,53 @@ void Request::parseRequestParameters() {
 
     if (request_type == SESSION) return;
 
-    path = new Path(request + i + 1);
+    string pathString = getPathString(i);
+    path = new Path(pathString.c_str());
 
-    while (request[i] && request[i] != ' ') ++i; // TODO: Can there be a space in the path?
+    if (request_type == READBLOCK || 
+        request_type == WRITEBLOCK) 
+    {
+        block = atoi(request + i);
 
-        if (request_type == READBLOCK || 
-            request_type == WRITEBLOCK) 
+        if (request_type == WRITEBLOCK) 
         {
-            block = atoi(request + i);
-
-            if (request_type == WRITEBLOCK) 
-            {
-                while(request[i] && std::isdigit(request[i])) ++i; 
-                ++i; // step over the <NULL>
-                data = request + i;
-            }	
-        }
-        else if (request_type == CREATE) {
-            type = request[i + 1];
-        }
+            while(request[i] && isdigit(request[i])) ++i; 
+            ++i; // step over the <NULL>
+            data = request + i;
+        }	
+    }
+    else if (request_type == CREATE) {
+        type = request[i];
+        assert(type == 'f' || type == 'd');
+    }
 }
 
 int Request::getNextInteger(int &index) {
     while (!isdigit(request[index])) ++index;
     int res = atoi(request + index);
     while (isdigit(request[index])) ++index;
+    ++index;
     return res;
+}
+
+//I made this to provide the same functionality as 
+//getNextInteger except with the path name. It takes
+//the index of the beginning of the path and returns
+//a string containing the path. When the function returns,
+//index is the index of the character just after the path
+//delimiter (' ' or '\n')
+string Request::getPathString(int &index) {
+    uint32_t i;
+    char path[FS_MAXFILENAME + 1];
+
+    for (i = 0; request[index] != ' ' && request[index] != '\0'; i++, index++) {
+        path[i] = request[index];
+    }
+
+    assert(request[index] == ' ' || request[index] == '\0');
+    path[i] = '\0';
+    index++;
+    return string(path);
 }
 
 REQUEST_T Request::parseRequestType() {
@@ -161,8 +183,13 @@ REQUEST_T Request::getRequestType() {
     return request_type;
 }
 
+void Request::initializeData() {
+    data = new char[FS_BLOCKSIZE];
+}
+
 Request::~Request() {
     delete [] request;
     if (path) delete path;
+    if (data) delete []data;
 }
 

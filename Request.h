@@ -1,6 +1,7 @@
 #ifndef __REQUEST_H__
 #define __REQUEST_H__
 
+#include <string>
 #include "Path.h"
 
 enum REQUEST_T { SESSION, READBLOCK, WRITEBLOCK, CREATE, DELETE };
@@ -26,6 +27,8 @@ public:
     unsigned getBlock();
 
     char* getData();
+
+    void initializeData();
 
     std::string getUsername();
 
@@ -58,6 +61,8 @@ private:
     REQUEST_T parseRequestType();
 
     int getNextInteger(int &index);
+
+    std::string getPathString(int &index);
 };
 
 #endif    

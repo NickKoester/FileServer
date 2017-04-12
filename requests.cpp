@@ -19,7 +19,7 @@ void sessionRequest(Request *request) {
     request->setSession(seshNum);
 }
 
-char *readRequest(Request *request) {
+void readRequest(Request *request) {
     //validate input
     //  session belongs to user (done)
     //  sequence is sequential (done)
@@ -45,13 +45,12 @@ char *readRequest(Request *request) {
 
     uint32_t data_block = file_inode.blocks[request->getBlock()];
     //TODO unlock inode
-    char *buffer = new char[FS_BLOCKSIZE];
+
+    request->initializeData();
 
     //TODO need reader lock on data
-    disk_readblock(data_block, buffer);
+    disk_readblock(data_block, request->getData());
     //TODO unlock data
-
-    return buffer;
 }
 
 void writeRequest(Request *request) {
@@ -125,7 +124,7 @@ void createRequest(Request *request) {
 
     disk_readblock(parent_inode_block, &inode);
 
-    const char *name = path->getNameCString(path->depth());
+    const char *name = path->getNameCString(path->depth() - 1);
     addDirentry(&inode, parent_inode_block, name, block);
 }
 
@@ -211,7 +210,7 @@ found:
     strcpy(block_buffer[direntry_idx].name, file_name);
     block_buffer[direntry_idx].inode_block = file_block;
 
-    disk_writeblock(data_block, &block_buffer);
+    disk_writeblock(data_block, block_buffer);
 
     //Inode needs to be updated after the the data block is written to disk to
     //maintain a consistent state
@@ -249,17 +248,22 @@ exit:
         if (block_buffer[i].inode_block != 0) empty = false;
     }
 
+    //Updates the inode if a direntry block had to be freed. Since the block is no longer
+    //in use, it can be freed without being updated on disk. If the block is still in use, it
+    //is not freed but is written back to disk instead.
     if (empty) {
         for (uint32_t i = direntry_idx; i < dir_inode->size - 1; i++) {
             dir_inode->blocks[i] = dir_inode->blocks[i + 1];
         }
+
+        dir_inode->size--;
+
+        disk_writeblock(dir_inode_block, dir_inode);
+
+        blockManager.freeBlock(data_block);
+    } else {
+        disk_writeblock(data_block, block_buffer);
     }
-
-    dir_inode->size = dir_inode->size - 1;
-
-    disk_writeblock(dir_inode_block, dir_inode);
-
-    blockManager.freeBlock(data_block);
 }
 
 // creates the <sessionnumber> <sequencenumber><NULL>(<data> if readblock)

@@ -10,7 +10,7 @@ Path::Path(const char *pathname) {
         return;
     }
 
-    while(!done && pathname[nameIdx] != ' ') {
+    while(!done) {
         char name[FS_MAXFILENAME + 1];
         int i = 0;
 
@@ -18,7 +18,8 @@ Path::Path(const char *pathname) {
         while(pathname[nameIdx] != '/' && pathname[nameIdx] != '\0') {
             name[i++] = pathname[nameIdx++];
         }
-        if(!pathname[nameIdx+1]) {
+
+        if(!pathname[nameIdx]) {
             done = true;
         }
         name[i++] = '\0';
