@@ -183,8 +183,13 @@ REQUEST_T Request::getRequestType() {
     return request_type;
 }
 
+void initializeData() {
+    data = new char[FS_BLOCKSIZE];
+}
+
 Request::~Request() {
     delete [] request;
     if (path) delete path;
+    if (data) delete data;
 }
 

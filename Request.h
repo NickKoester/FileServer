@@ -28,6 +28,8 @@ public:
 
     char* getData();
 
+    void initializeData();
+
     std::string getUsername();
 
     void sendResponse(char* text, unsigned size);

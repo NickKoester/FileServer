@@ -10,7 +10,7 @@ void createRequest(Request *request);
 
 void writeRequest(Request *request);
 
-char *readRequest(Request *request);
+void readRequest(Request *request);
 
 void deleteRequest(Request *request);
 

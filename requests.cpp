@@ -19,7 +19,7 @@ void sessionRequest(Request *request) {
     request->setSession(seshNum);
 }
 
-char *readRequest(Request *request) {
+void readRequest(Request *request) {
     //validate input
     //  session belongs to user (done)
     //  sequence is sequential (done)
@@ -45,13 +45,12 @@ char *readRequest(Request *request) {
 
     uint32_t data_block = file_inode.blocks[request->getBlock()];
     //TODO unlock inode
-    char *buffer = new char[FS_BLOCKSIZE];
+
+    request->initializeData();
 
     //TODO need reader lock on data
-    disk_readblock(data_block, buffer);
+    disk_readblock(data_block, request->getData());
     //TODO unlock data
-
-    return buffer;
 }
 
 void writeRequest(Request *request) {
