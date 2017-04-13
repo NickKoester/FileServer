@@ -18,6 +18,7 @@ Request::Request(int in_sockfd) {
     sockfd = in_sockfd;
     path = nullptr;
     data = nullptr;
+    isRead = false;
 }
 
 unsigned Request::getSession() { 
@@ -123,13 +124,12 @@ void Request::parseRequestParameters() {
     if (request_type == READBLOCK || 
         request_type == WRITEBLOCK) 
     {
-        block = atoi(request + i);
+        block = getNextInteger(i); 
 
         if (request_type == WRITEBLOCK) 
         {
-            while(request[i] && isdigit(request[i])) ++i; 
-            ++i; // step over the <NULL>
-            data = request + i;
+            data = new char[FS_BLOCKSIZE];
+            memcpy(data, request + i, FS_BLOCKSIZE);
         }	
     }
     else if (request_type == CREATE) {
@@ -168,11 +168,26 @@ string Request::getPathString(int &index) {
 
 REQUEST_T Request::parseRequestType() {
     char rt = request[3];
-    if (rt == 'S')      return SESSION;
-    else if (rt == 'R') return READBLOCK;
-    else if (rt == 'W') return WRITEBLOCK;
-    else if (rt == 'C') return CREATE;
-    else return DELETE;
+    REQUEST_T returnVal;
+
+    if (rt == 'S') {
+        returnVal = SESSION;
+
+    } else if (rt == 'R') {
+        isRead = true;
+        returnVal =  READBLOCK;
+
+    } else if (rt == 'W') {
+        returnVal = WRITEBLOCK;
+
+    } else if (rt == 'C') {
+        returnVal = CREATE;
+
+    } else {
+        returnVal = DELETE;
+    }
+
+    return returnVal;
 }
 
 char Request::getType() {
@@ -187,9 +202,13 @@ void Request::initializeData() {
     data = new char[FS_BLOCKSIZE];
 }
 
+bool Request::isReadRequest() {
+    return isRead;
+}
+
 Request::~Request() {
     delete [] request;
     if (path) delete path;
-    if (data) delete []data;
+    if (data) delete[] data;
 }
 

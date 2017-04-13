@@ -1,4 +1,5 @@
 #include <cstring>
+#include <cassert>
 #include "fs_server.h"
 #include "requests.h"
 #include "Session.h"
@@ -87,7 +88,7 @@ void writeRequest(Request *request) {
 
     unsigned block = request->getBlock();
 
-    if (file_inode.size < block) {
+    if (block < file_inode.size) {
         data_block = file_inode.blocks[block];
     } else if (file_inode.size == block) {
         data_block = blockManager.getFreeBlock();
@@ -276,14 +277,10 @@ char* createResponse(Request *request, unsigned &response_size) {
                       std::to_string(request->getSequence());
     char* res;
 
-    if (request->getData() == nullptr) {
-        response_size = response.size() + 1;
-        res = new char[response_size];
-        strcpy(res, response.c_str());
-    } 
-    else {
-        string tmp(request->getData());
-        response_size = response.size() + tmp.size() + 1;
+    if(request->isReadRequest()) {
+        assert(request->getData());
+        //string tmp(request->getData());
+        response_size = response.size() + FS_BLOCKSIZE + 1;
         res = new char[response_size];
 
         unsigned i;
@@ -293,11 +290,16 @@ char* createResponse(Request *request, unsigned &response_size) {
         res[i++] = '\0';
 
         unsigned k;
-        for (k=0; k<tmp.size(); ++k) {
-            res[i + k] = tmp[k];
-            if (k == 0) cout << res[i + k];
+        for (k=0; k<FS_BLOCKSIZE; ++k) {
+            res[i + k] = request->getData()[k];
         }
     }
+    else {
+        response_size = response.size() + 1;
+        res = new char[response_size];
+        strcpy(res, response.c_str());
+    }
+ 
     return res;
 }
 

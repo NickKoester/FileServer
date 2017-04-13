@@ -38,6 +38,8 @@ public:
  
     char getType();
 
+    bool isReadRequest();
+
     ~Request();
 
 private:
@@ -55,6 +57,7 @@ private:
     unsigned block;
     char type;
     char* data;
+    bool isRead;
 
     void decryptRequest(const char* password, char* encrypted);
 
