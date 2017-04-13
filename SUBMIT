@@ -21,3 +21,4 @@ test02.cpp
 test03.cpp
 testSpec.cpp
 testSession.cpp
+testCreateDir.cpp
