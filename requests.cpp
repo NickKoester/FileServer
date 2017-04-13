@@ -49,7 +49,6 @@ void readRequest(Request *request) {
     uint32_t data_block = file_inode.blocks[request->getBlock()];
     //TODO unlock inode
 
-    request->initializeData();
 
     //TODO need reader lock on data
     disk_readblock(data_block, request->getData());
@@ -279,7 +278,7 @@ char* createResponse(Request *request, unsigned &response_size) {
 
     if(request->isReadRequest()) {
         assert(request->getData());
-        //string tmp(request->getData());
+        string tmp(request->getData());
         response_size = response.size() + FS_BLOCKSIZE + 1;
         res = new char[response_size];
 

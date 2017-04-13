@@ -84,7 +84,6 @@ void Request::parseHeader() {
 void Request::parseRequestAndDecrypt(const char* password) {
     char* encrypted = new char[encrypted_request_size];
     int rcv = 0;
-
     while (rcv < encrypted_request_size) {
         int received = recv(sockfd, encrypted + rcv, encrypted_request_size - rcv, 0);
         if (received == -1) {
@@ -94,7 +93,6 @@ void Request::parseRequestAndDecrypt(const char* password) {
         if (received == 0) break;
         rcv += received;
     }
-
     decryptRequest(password, encrypted);
     delete [] encrypted;
 }
@@ -104,7 +102,7 @@ void Request::decryptRequest(const char* password, char* encrypted) {
     
     request = static_cast<char*>(fs_decrypt(password, encrypted, encrypted_request_size, decrypted_msg_size));
     request_size = decrypted_msg_size[0];
-
+ 
     if (request == nullptr) close(sockfd);
     delete [] decrypted_msg_size;
 }
@@ -128,7 +126,6 @@ void Request::parseRequestParameters() {
 
         if (request_type == WRITEBLOCK) 
         {
-            data = new char[FS_BLOCKSIZE];
             memcpy(data, request + i, FS_BLOCKSIZE);
         }	
     }
@@ -176,10 +173,10 @@ REQUEST_T Request::parseRequestType() {
     } else if (rt == 'R') {
         isRead = true;
         returnVal =  READBLOCK;
-
+        initializeData();
     } else if (rt == 'W') {
         returnVal = WRITEBLOCK;
-
+        initializeData();
     } else if (rt == 'C') {
         returnVal = CREATE;
 
