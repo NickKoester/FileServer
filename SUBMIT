@@ -20,3 +20,4 @@ test01.cpp
 test02.cpp
 test03.cpp
 testSpec.cpp
+testSession.cpp
