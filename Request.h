@@ -2,8 +2,10 @@
 #define __REQUEST_H__
 
 #include <string>
+#include "SessionManager.h"
 #include "Path.h"
 
+extern SessionManager sessionManager;
 enum REQUEST_T { SESSION, READBLOCK, WRITEBLOCK, CREATE, DELETE };
 
 class Request {
@@ -39,6 +41,8 @@ public:
     char getType();
 
     bool isReadRequest();
+
+    void validateInput();
 
     ~Request();
 

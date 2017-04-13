@@ -203,9 +203,17 @@ bool Request::isReadRequest() {
     return isRead;
 }
 
-Request::~Request() {
-    delete [] request;
-    if (path) delete path;
-    if (data) delete[] data;
+void Request::validateInput() {
+    bool valid = true;
+    if (request_type != SESSION) {
+        valid = sessionManager.validateRequest(session, sequence, username.c_str());
+    }
+
+    if (!valid) throw std::runtime_error("Invalid request\n");
 }
 
+Request::~Request() {
+    delete [] request;
+    delete path;
+    delete[] data;
+}

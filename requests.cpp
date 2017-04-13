@@ -190,10 +190,13 @@ void addDirentry(fs_inode *dir_inode, const uint32_t dir_inode_block, const char
         //Checks if there is a free direntry entry in current block, where
         //a free direntry is one where inode_block is 0
         for (uint32_t j = 0; j < FS_DIRENTRIES; j++) {
+            if (!strcmp(block_buffer[j].name, file_name)) {
+                //TODO cry
+            }
+
             if (!block_buffer[j].inode_block) {
                 found = true;
                 direntry_idx = j;
-                goto found;
             }
         }
     }
@@ -202,13 +205,14 @@ void addDirentry(fs_inode *dir_inode, const uint32_t dir_inode_block, const char
     //a new block must be allocated. It is important that this block
     //be filled with 0's (or at least just inode_block) so they are known
     //to be free
-    memset(block_buffer, 0, FS_BLOCKSIZE);
+    if (!found) {
+        memset(block_buffer, 0, FS_BLOCKSIZE);
 
-    data_block = blockManager.getFreeBlock();
-    dir_inode->blocks[dir_inode->size++] = data_block;
+        data_block = blockManager.getFreeBlock();
+        dir_inode->blocks[dir_inode->size++] = data_block;
+    }
 
     //Writes file data to direntry
-found:
     strcpy(block_buffer[direntry_idx].name, file_name);
     block_buffer[direntry_idx].inode_block = file_block;
 

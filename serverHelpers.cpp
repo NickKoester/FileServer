@@ -20,6 +20,13 @@ void requestHandler(int sockfd) {
    
     request.parseRequestParameters();
 
+    try {
+        request.validateInput();
+    } catch (...) {
+        close(sockfd);
+        return;
+    }
+
     switch(request.getRequestType())
     {
         case SESSION:
