@@ -23,3 +23,5 @@ testSpec.cpp
 testSession.cpp
 testCreateDir.cpp
 testCreateF.cpp
+testInit.cpp
+test04.cpp
