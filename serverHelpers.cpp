@@ -22,7 +22,8 @@ void requestHandler(int sockfd) {
 
     try {
         request.validateInput();
-    } catch (...) {
+    } catch (std::runtime_error &e) {
+        cerr << e.what();
         close(sockfd);
         return;
     }
@@ -46,7 +47,13 @@ void requestHandler(int sockfd) {
 
         case CREATE:
             cout << "Create Request\n";
-            createRequest(&request);
+            try {
+                createRequest(&request);
+            } catch (std::runtime_error &e) {
+                cerr << e.what();
+                close(sockfd);
+                return;
+            }
             break;
 
         case DELETE:

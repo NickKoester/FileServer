@@ -204,12 +204,13 @@ bool Request::isReadRequest() {
 }
 
 void Request::validateInput() {
-    bool valid = true;
     if (request_type != SESSION) {
-        valid = sessionManager.validateRequest(session, sequence, username.c_str());
+        try {
+            sessionManager.validateRequest(session, sequence, username.c_str());
+        } catch (std::runtime_error &e) {
+            throw e;
+        }
     }
-
-    if (!valid) throw std::runtime_error("Invalid request\n");
 }
 
 Request::~Request() {

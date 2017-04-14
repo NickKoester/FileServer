@@ -108,6 +108,7 @@ void writeRequest(Request *request) {
 void createRequest(Request *request) {
     //check that username is the same as the one in sesh (done)
     //check seq number is valid (done)
+    //check that there are no duplicates (done)
     //check that path exits
     //check that there are free blocks
 
@@ -191,7 +192,7 @@ void addDirentry(fs_inode *dir_inode, const uint32_t dir_inode_block, const char
         //a free direntry is one where inode_block is 0
         for (uint32_t j = 0; j < FS_DIRENTRIES; j++) {
             if (!strcmp(block_buffer[j].name, file_name)) {
-                //TODO cry
+                throw std::runtime_error("File/Directory already exists\n");
             }
 
             if (!block_buffer[j].inode_block) {
