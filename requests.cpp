@@ -158,21 +158,23 @@ void deleteRequest(Request *request) {
     //STATE: done
 
     Path *path = request->getPath();
-    uint32_t file_inode_block = traversePath(*path, path->depth());
+    const char *filename = path->getNameCString(path->depth() - 1);
+    //uint32_t file_inode_block = traversePath(*path, path->depth());
     uint32_t dir_inode_block = traversePath(*path, path->depth() - 1);
     fs_inode inode;
 
     disk_readblock(dir_inode_block, &inode);
 
-    removeDirentry(&inode, dir_inode_block, file_inode_block);
+    //removeDirentry(&inode, dir_inode_block, file_inode_block);
+    uint32_t blockToDelete = removeDirentry(&inode, dir_inode_block, filename);
 
-    disk_readblock(file_inode_block, &inode);
+    disk_readblock(blockToDelete, &inode);
     
     for (uint32_t i = 0; i < inode.size; i++) {
         blockManager.freeBlock(inode.blocks[i]);
     }
 
-    blockManager.freeBlock(file_inode_block);
+    blockManager.freeBlock(blockToDelete);
 }
 
 //Adds information about newly created file to the directory refered to by dir_inode. This function finds a free direntry to store
@@ -228,8 +230,8 @@ void addDirentry(fs_inode *dir_inode, const uint32_t dir_inode_block, const char
 
 //Deletes the direntry containing file_block from dir_inode. May edit dir_inode if removing the entry causes
 //the block to no longer be used
-void removeDirentry(fs_inode *dir_inode, const uint32_t dir_inode_block, const uint32_t file_block) {
-    uint32_t data_block, direntry_idx = 0;
+uint32_t removeDirentry(fs_inode *dir_inode, const uint32_t dir_inode_block, const char *filename) {
+    uint32_t data_block, freeBlock, direntry_idx = 0;
     char buffer[FS_BLOCKSIZE];
     fs_direntry *block_buffer = (fs_direntry *) buffer;
     bool empty = true;
@@ -241,7 +243,10 @@ void removeDirentry(fs_inode *dir_inode, const uint32_t dir_inode_block, const u
 
         //Checks if the direntry is in the block in block_buffer
         for (uint32_t j = 0; j < FS_DIRENTRIES; j++) {
-            if (block_buffer[j].inode_block == file_block) {
+
+            //if this is the file
+            if (!strcmp(block_buffer[j].name, filename)) {
+                freeBlock = block_buffer[j].inode_block; 
                 block_buffer[j].inode_block = 0;
                 direntry_idx = i;
                 goto exit;
@@ -271,6 +276,7 @@ exit:
     } else {
         disk_writeblock(data_block, block_buffer);
     }
+    return freeBlock;
 }
 
 // creates the <sessionnumber> <sequencenumber><NULL>(<data> if readblock)
