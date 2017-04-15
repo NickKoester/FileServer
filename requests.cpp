@@ -37,12 +37,16 @@ void readRequest(Request *request) {
     Path *path = request->getPath();
 
     //this function returns with the reader lock of file
-    uint32_t file_inode_blocknum = traversePath(*path, path->depth(), false);
+    uint32_t file_inode_blocknum = traversePath(request, *path, path->depth(), false);
 
     disk_readblock(file_inode_blocknum, &file_inode);
 
     if (file_inode.type != 'f') {
         throw std::runtime_error("Cannot read from directory\n");
+    }
+
+    if (strcmp(file_inode.owner, request.getUsername().c_str())) {
+        throw std::runtime_error("You do not own this file\n");
     }
 
     uint32_t data_block = file_inode.blocks[request->getBlock()];
@@ -64,13 +68,17 @@ void writeRequest(Request *request) {
     Path *path = request->getPath();
 
     //writer lock will be aquired from this function
-    uint32_t file_inode_blocknum = traversePath(*path, path->depth(), true);
+    uint32_t file_inode_blocknum = traversePath(request, *path, path->depth(), true);
 
     //need reader lock on inode
     disk_readblock(file_inode_blocknum, &file_inode);
 
     if (file_inode.type != 'f') {
         throw std::runtime_error("Cannot write to directory\n");
+    }
+
+    if (strcmp(file_inode.owner, request.getUsername().c_str())) {
+        throw std::runtime_error("You do not own this file\n");
     }
 
     uint32_t data_block = -1;
@@ -118,7 +126,9 @@ void createRequest(Request *request) {
     new_inode.size = 0;
 
     Path *path = request->getPath();
-    uint32_t parent_inode_block = traversePath(*path, path->depth() - 1);
+
+    //writer lock is aquired for this directory
+    uint32_t parent_inode_block = traversePath(request, *path, path->depth() - 1, true);
     disk_readblock(parent_inode_block, &parent_inode);
 
     if (parent_inode.type != 'd') {
@@ -128,9 +138,12 @@ void createRequest(Request *request) {
         throw std::runtime_error(message);
     }
 
+    if (strcmp(parent_inode.owner, request.getUsername().c_str())) {
+        throw std::runtime_error("You do not own this directory\n");
+    }
+
     const char *name = path->getNameCString(path->depth() - 1);
 
-    //Write file inode to disk
     uint32_t direntry_block = 0;
     uint32_t direntry_idx   = 0;
     bool found = false;
@@ -143,6 +156,11 @@ void createRequest(Request *request) {
     }
 
     uint32_t file_block = blockManager.getFreeBlock();
+    
+    //create new lock for this file and aquire it
+    lockManager.createLock(file_block);
+    lockManager.aquireWriteLock(file_block);
+
     disk_writeblock(file_block, &new_inode);
 
     //If an empty directory listing could not be found for a block,
@@ -167,6 +185,9 @@ void createRequest(Request *request) {
     if (!found) {
         disk_writeblock(parent_inode_block, &parent_inode);
     }
+
+    lockManager.releaseWriteLock(parent_inode_block);
+    lockManager.releaseWriteLock(file_block);
 }
 
 void deleteRequest(Request *request) {
@@ -178,10 +199,14 @@ void deleteRequest(Request *request) {
     Path *path = request->getPath();
     const char *filename = path->getNameCString(path->depth() - 1);
     //uint32_t file_inode_block = traversePath(*path, path->depth());
-    uint32_t dir_inode_block = traversePath(*path, path->depth() - 1);
+    uint32_t dir_inode_block = traversePath(request, *path, path->depth() - 1);
     fs_inode inode;
 
     disk_readblock(dir_inode_block, &inode);
+
+    if (strcmp(inode.owner, request.getUsername().c_str())) {
+        throw std::runtime_error("You do not own this directory\n");
+    }
 
     //removeDirentry(&inode, dir_inode_block, file_inode_block);
     uint32_t blockToDelete = removeDirentry(&inode, dir_inode_block, filename);
@@ -345,11 +370,13 @@ char* createGoodResponse(Request *request, unsigned &response_size) {
 // depth should be <= path.depth()
 // NOTE: lock of the inode you want will be aquired when this returns
 // 'write' should be true if you want to write lock, false if read lock
-uint32_t traversePath(const Path &path, int depth, bool write) {
+uint32_t traversePath(Request *request, const Path &path, int depth, bool write) {
 
     if(depth > path.depth()) {
         throw std::runtime_error("Invalid path\n");
     }
+
+    char *username = request.getUsername().c_str();
 
     uint32_t parentBlock = 0;
     uint32_t childBlock = 0;
@@ -360,6 +387,15 @@ uint32_t traversePath(const Path &path, int depth, bool write) {
     for(int i = 0; i < depth; i++) {
         fs_inode parentDirectory;
         disk_readblock(parentBlock, &parentDirectory);
+
+        //checks that we have permission to access this file
+        if((parentBlock && strcmp(parentDirectory.owner, username)) {
+            string message = string("\"")              +
+                             path.getNameString(i - 1) +
+                             string("\" permission denied.\n");
+            throw std::runtime_error(message);
+
+        }
 
         //checks that we dont try to traverse into a file
         if (parentDirectory.type != 'd') {
