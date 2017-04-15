@@ -2,6 +2,7 @@
 #define LOCK_MANAGER_H
 
 #include <unordered_map>
+#include <mutex>
 #include "RWLock.h"
 
 class LockManager {
@@ -22,6 +23,7 @@ public:
 
 private:
    std::unordered_map <uint32_t, RWLock> lockMap;
+   std::mutex mapLock;
 };
 
 #endif

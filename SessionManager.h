@@ -2,6 +2,8 @@
 #define SESSION_MANAGER_H
 
 #include <unordered_map>
+#include <mutex>
+
 #include "Session.h"
 
 class SessionManager {
@@ -13,6 +15,7 @@ public:
     void remove(unsigned int key);
 private:
     std::unordered_map<unsigned int, Session *> sessionMap;
+    std::mutex mapLock;
 };
 
 #endif
