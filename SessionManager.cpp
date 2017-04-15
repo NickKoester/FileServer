@@ -19,7 +19,8 @@ void SessionManager::validateRequest(unsigned int key, unsigned int seq, const c
     try { 
         session = sessionMap.at(key);
     } catch (...) {
-        throw std::runtime_error("Invalid session\n");
+        string message = string("Invalid session: ") + std::to_string(key) + string("\n");
+        throw std::runtime_error(message);
     }
 
     if (!session->belongsToUser(username)) {
