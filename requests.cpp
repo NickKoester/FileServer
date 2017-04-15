@@ -94,6 +94,8 @@ void writeRequest(Request *request) {
       file_inode.size++;
       disk_writeblock(file_inode_blocknum, &file_inode);
     }
+
+    lockManager.releaseWriteLock(file_inode_blocknum);
 }
 
 void createRequest(Request *request) {
@@ -123,10 +125,6 @@ void createRequest(Request *request) {
     if (parent_inode.type != 'd') {
         string message = string("\"")                           +
                          path->getNameString(path->depth() - 2) +
-                         string("\" is not a directory\n");
-        throw std::runtime_error(message);
-    }
-
                          string("\" is not a directory\n");
         throw std::runtime_error(message);
     }

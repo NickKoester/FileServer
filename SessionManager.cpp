@@ -31,6 +31,7 @@ void SessionManager::validateRequest(unsigned int key, unsigned int seq, const c
     Session *session = nullptr;
     mapLock.lock();
 
+
     try { 
         session = sessionMap.at(key);
     } catch (...) {
