@@ -1,19 +1,24 @@
+#ifndef RWLOCK_H
+#define RWLOCK_H
+
 #include <mutex>
 #include <condition_variable>
 
 class RWLock {
 public:
-    readerStart();
-    readerFinish();
+    void readerStart();
+    void readerFinish();
 
-    writerStart();
-    writerFinish();
+    void writerStart();
+    void writerFinish();
 private:
-    std::mutex rwLock;
-    std::condition_variable waitingReaders;
-    std::condition_variable waitingWriters;
+    std::unique_lock<std::mutex> rwLock;
+    std::condition_variable cvReaders;
+    std::condition_variable cvWriters;
 
     size_t numReaders;
     size_t numWriters;
     size_t waitingWriters;
 };
+
+#endif

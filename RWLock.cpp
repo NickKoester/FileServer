@@ -5,7 +5,7 @@ void RWLock::readerStart() {
     rwLock.lock();
 
     while (numWriters + waitingWriters > 0) {
-        waitingReaders.wait();
+        cvReaders.wait(rwLock);
     }
 
     numReaders++;
@@ -19,7 +19,7 @@ void RWLock::readerFinish() {
     numReaders--;
 
     if (numReaders == 0) {
-        waitingWriters.notify_one();
+        cvWriters.notify_one();
     }
 
     rwLock.unlock();
@@ -31,7 +31,7 @@ void RWLock::writerStart() {
     waitingWriters++;
 
     while (numReaders + numWriters > 0) {
-        waitingWriters.wait();
+        cvWriters.wait(rwLock);
     }
 
     waitingWriters--;
@@ -43,8 +43,8 @@ void RWLock::writerStart() {
 void RWLock::writerFinish() {
     rwLock.lock();
     numWriters--;
-    waitingReaders.broadcast();
-    waitingWriters.signal();
+    cvReaders.notify_all();
+    cvWriters.notify_one();
 
     rwLock.unlock();
 }
