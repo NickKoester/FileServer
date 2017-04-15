@@ -111,7 +111,6 @@ void createRequest(Request *request) {
     //  Then write inode and do other stuff
     //  Then proceed?
 
-    uint32_t block = blockManager.getFreeBlock();
     fs_inode new_inode, parent_inode;
 
     new_inode.type = request->getType();
@@ -132,9 +131,42 @@ void createRequest(Request *request) {
     const char *name = path->getNameCString(path->depth() - 1);
 
     //Write file inode to disk
-    disk_writeblock(block, &new_inode);
+    uint32_t direntry_block = 0;
+    uint32_t direntry_idx   = 0;
+    bool found = false;
+    fs_direntry direntries[FS_DIRENTRIES];
 
-    addDirentry(&parent_inode, parent_inode_block, name, block);
+    try {
+        found = findDirentry(&parent_inode, name, &direntry_block, &direntry_idx, direntries);
+    } catch (std::runtime_error &e) {
+        throw e;
+    }
+
+    uint32_t file_block = blockManager.getFreeBlock();
+    disk_writeblock(file_block, &new_inode);
+
+    //If an empty directory listing could not be found for a block,
+    //a new block must be allocated. It is important that this block
+    //be filled with 0's (or at least just inode_block) so they are known
+    //to be free
+    if (!found) {
+        memset(direntries, 0, FS_DIRENTRIES * sizeof(fs_direntry));
+
+        direntry_block = blockManager.getFreeBlock();
+        parent_inode.blocks[parent_inode.size++] = direntry_block;
+    }
+
+    //Writes file data to direntry
+    strcpy(direntries[direntry_idx].name, name);
+    direntries[direntry_idx].inode_block = file_block;
+
+    disk_writeblock(direntry_block, &direntries);
+
+    //Inode needs to be updated after the the data block is written to disk to
+    //maintain a consistent state
+    if (!found) {
+        disk_writeblock(parent_inode_block, &parent_inode);
+    }
 }
 
 void deleteRequest(Request *request) {
@@ -163,55 +195,35 @@ void deleteRequest(Request *request) {
     blockManager.freeBlock(blockToDelete);
 }
 
-//Adds information about newly created file to the directory refered to by dir_inode. This function finds a free direntry to store
-//the information in and reserves the right to modify dir_inode if a new block needs to be allocated
-void addDirentry(fs_inode *dir_inode, const uint32_t dir_inode_block, const char *file_name, const uint32_t file_block) {
-    uint32_t data_block, direntry_idx = 0;
+//Returns block that the free direntry is in
+//Probably also need the index of it
+//
+bool findDirentry(fs_inode *dir_inode, const char *filename, uint32_t *direntry_block, uint32_t *direntry_idx, fs_direntry *direntries) {
+    uint32_t current_block = 0;
     bool found = false;
-    char buffer[FS_BLOCKSIZE];
-    fs_direntry *block_buffer = (fs_direntry *) buffer;
+    fs_direntry direntry_buffer[FS_DIRENTRIES];
 
-    //Checks for free direntry in each data block of the directory
     for (uint32_t i = 0; i < dir_inode->size; i++) {
-        data_block = dir_inode->blocks[i];
-        disk_readblock(data_block, block_buffer);
+        current_block = dir_inode->blocks[i];
+        disk_readblock(current_block, direntry_buffer);
 
         //Checks if there is a free direntry entry in current block, where
         //a free direntry is one where inode_block is 0
         for (uint32_t j = 0; j < FS_DIRENTRIES; j++) {
-            if (!strcmp(block_buffer[j].name, file_name)) {
+            if (!strcmp(direntry_buffer[j].name, filename)) {
                 throw std::runtime_error("File/Directory already exists\n");
             }
 
-            if (!block_buffer[j].inode_block) {
+            if (!found && !direntry_buffer[j].inode_block) {
                 found = true;
-                direntry_idx = j;
+                *direntry_block = current_block;
+                *direntry_idx = j;
+                memcpy(direntries, direntry_buffer, sizeof(fs_direntry) * FS_DIRENTRIES);
             }
         }
     }
 
-    //If an empty directory listing could not be found for a block,
-    //a new block must be allocated. It is important that this block
-    //be filled with 0's (or at least just inode_block) so they are known
-    //to be free
-    if (!found) {
-        memset(block_buffer, 0, FS_BLOCKSIZE);
-
-        data_block = blockManager.getFreeBlock();
-        dir_inode->blocks[dir_inode->size++] = data_block;
-    }
-
-    //Writes file data to direntry
-    strcpy(block_buffer[direntry_idx].name, file_name);
-    block_buffer[direntry_idx].inode_block = file_block;
-
-    disk_writeblock(data_block, block_buffer);
-
-    //Inode needs to be updated after the the data block is written to disk to
-    //maintain a consistent state
-    if (!found) {
-        disk_writeblock(dir_inode_block, dir_inode);
-    }
+    return found;
 }
 
 //Deletes the direntry containing file_block from dir_inode. May edit dir_inode if removing the entry causes
