@@ -14,6 +14,7 @@
 #include "requests.h"
 #include "BlockManager.h"
 #include "SessionManager.h"
+#include "LockManager.h"
 using namespace std;
 
 
@@ -24,6 +25,7 @@ unordered_map<string, string> users;
 
 BlockManager blockManager;
 SessionManager sessionManager;
+LockManager lockManager;
 
 int main(int argc, char *argv[])
 {
