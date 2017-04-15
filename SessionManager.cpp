@@ -13,22 +13,25 @@ bool SessionManager::exists(unsigned int key) {
     return sessionMap.find(key) != sessionMap.end();
 }
 
-bool SessionManager::validateRequest(unsigned int key, unsigned int seq, const char *username) {
+void SessionManager::validateRequest(unsigned int key, unsigned int seq, const char *username) {
     Session *session = nullptr;
 
     try { 
         session = sessionMap.at(key);
     } catch (...) {
-        return false;
+        string message = string("Invalid session: ") + std::to_string(key) + string("\n");
+        throw std::runtime_error(message);
     }
 
-    if (!session->validate(seq, username)) {
-        return false;
+    if (!session->belongsToUser(username)) {
+        throw std::runtime_error("Session does not belong to user\n");
     }
 
-    session->updateSequenceNum(seq);
+    if (!session->validateSequenceNumber(seq)) {
+        throw std::runtime_error("Sequence number must be strictly increasing\n");
+    }
 
-    return true;
+    session->updateSequenceNumber(seq);
 }
 
 void SessionManager::remove(unsigned int key) {

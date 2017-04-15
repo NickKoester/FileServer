@@ -9,16 +9,18 @@ Session::Session(unsigned int seq, const char *user) {
     username = string(user);
 }
 
-unsigned int Session::getNum() {
+unsigned int Session::getNum() const {
     return sessionNum;
 }
 
-bool Session::validate(unsigned int seq, const char *name) {
-    if (username.compare(name)) return false;
-    if (!(prevSequenceNum < seq)) return false;
-    return true;
+bool Session::validateSequenceNumber(unsigned int seq) const {
+    return prevSequenceNum < seq;
 }
 
-void Session::updateSequenceNum(unsigned int seq) {
+bool Session::belongsToUser(const char *name) const {
+    return !username.compare(name);
+}
+
+void Session::updateSequenceNumber(unsigned int seq) {
     prevSequenceNum = seq;
 }

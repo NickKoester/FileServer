@@ -22,7 +22,8 @@ void requestHandler(int sockfd) {
 
     try {
         request.validateInput();
-    } catch (...) {
+    } catch (std::runtime_error &e) {
+        cerr << e.what();
         close(sockfd);
         return;
     }
@@ -31,32 +32,68 @@ void requestHandler(int sockfd) {
     {
         case SESSION:
             cout << "Session Request\n";
-            sessionRequest(&request); 
+
+            try {
+                sessionRequest(&request); 
+            } catch (std::runtime_error &e) {
+                cerr << e.what();
+                close(sockfd);
+                return;
+            }
             break;
 
         case READBLOCK:
             cout << "Readblock Request\n";
-            readRequest(&request);
+
+            try {
+                readRequest(&request);
+            } catch (std::runtime_error &e) {
+                cerr << e.what();
+                close(sockfd);
+                return;
+            }
             break;
 
         case WRITEBLOCK:
             cout << "Writeblock Request\n";
-            writeRequest(&request);
+
+            try {
+                writeRequest(&request);
+            } catch (std::runtime_error &e) {
+                cerr << e.what();
+                close(sockfd);
+                return;
+            }
             break;
 
         case CREATE:
             cout << "Create Request\n";
-            createRequest(&request);
+
+            try {
+                createRequest(&request);
+            } catch (std::runtime_error &e) {
+                cerr << e.what();
+                close(sockfd);
+                return;
+            }
             break;
 
         case DELETE:
             cout << "Delete Request\n";
-            deleteRequest(&request);
+
+            try {
+                deleteRequest(&request);
+            } catch (std::runtime_error &e) {
+                cerr << e.what();
+                close(sockfd);
+                return;
+            }
             break;
 
         default:
-            cout << "Fuck\n";
-            break;
+            cerr << "Invalid request\n";
+            close(sockfd);
+            return;
     }
         
     unsigned response_size = 0;

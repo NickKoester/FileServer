@@ -24,8 +24,6 @@ void sessionRequest(Request *request) {
 
 void readRequest(Request *request) {
     //validate input
-    //  session belongs to user (done)
-    //  sequence is sequential (done)
     //  user owns file
     //  path is valid
     //  file has enough blocks
@@ -43,7 +41,7 @@ void readRequest(Request *request) {
     disk_readblock(file_inode_blocknum, &file_inode);
 
     if (file_inode.type != 'f') {
-        //TODO handle
+        throw std::runtime_error("Cannot read from directory\n");
     }
 
     uint32_t data_block = file_inode.blocks[request->getBlock()];
@@ -57,18 +55,9 @@ void readRequest(Request *request) {
 
 void writeRequest(Request *request) {
     //validate input
-    //  session belongs to user -> easy to make a function to check (done)
-    //  sequence is sequential -> make function to check (done)
-    //
     //  path is valid -> done during the traversal
     //
     //  username owns file -> must be done after the tree is traversed
-    //  block refers to an existing block or one directly after the end -> done after traversal
-    //
-    //get inode for file
-    //get the correct block (or get a new one)
-    //write the data
-    //update the inode if a new block was added
 
     fs_inode file_inode;
 
@@ -79,7 +68,7 @@ void writeRequest(Request *request) {
     disk_readblock(file_inode_blocknum, &file_inode);
 
     if (file_inode.type != 'f') {
-        //TODO handle error
+        throw std::runtime_error("Cannot write to directory\n");
     }
 
     uint32_t data_block = -1;
@@ -93,7 +82,7 @@ void writeRequest(Request *request) {
         data_block = blockManager.getFreeBlock();
         added = true;
     } else {
-        //TODO handle error
+        throw std::runtime_error("Writes must occur sequentially\n");
     }
 
     disk_writeblock(data_block, request->getData());
@@ -106,10 +95,13 @@ void writeRequest(Request *request) {
 }
 
 void createRequest(Request *request) {
-    //check that username is the same as the one in sesh (done)
-    //check seq number is valid (done)
     //check that path exits
     //check that there are free blocks
+    //
+    //Want to
+    //  Read up to parent directory
+    //    throw exception if unable
+    //  Then proceed?
 
     uint32_t block = blockManager.getFreeBlock();
     fs_inode inode;
@@ -132,29 +124,9 @@ void createRequest(Request *request) {
 
 void deleteRequest(Request *request) {
     //validate inputs
-    //  check that session belong to user (done)
-    //  check that sequence number is sequential (done)
-    //
-    //  check that path is valid
     //
     //  check that username owns file
     //  check that it has no files or subdirectories and not root directory
-    //
-    //directory inode
-    //  remove direntry
-    //  check if direntry block is empty
-    //  if it is, shift the rest down
-    //  decrement size
-    //  write inode to disk
-    //
-    //STATE: inode good but file still "exists"
-    //
-    //file inode
-    //  free all data blocks
-    //  free inode block
-    //  no need to write to disk
-    //
-    //STATE: done
 
     Path *path = request->getPath();
     const char *filename = path->getNameCString(path->depth() - 1);
@@ -193,7 +165,7 @@ void addDirentry(fs_inode *dir_inode, const uint32_t dir_inode_block, const char
         //a free direntry is one where inode_block is 0
         for (uint32_t j = 0; j < FS_DIRENTRIES; j++) {
             if (!strcmp(block_buffer[j].name, file_name)) {
-                //TODO cry
+                throw std::runtime_error("File/Directory already exists\n");
             }
 
             if (!block_buffer[j].inode_block) {
@@ -252,6 +224,9 @@ uint32_t removeDirentry(fs_inode *dir_inode, const uint32_t dir_inode_block, con
             }
         }
     }
+
+    //Throws exception if file to delete was not found
+    throw std::runtime_error("File does not exist\n");
 
 exit:
     //If the direntry block is now empty, it must be removed from the directory inode
@@ -318,7 +293,7 @@ char* createResponse(Request *request, unsigned &response_size) {
 uint32_t traversePath(const Path &path, int depth) {
 
     if(depth > path.depth()) {
-        //bad shit
+        throw std::runtime_error("Invalid path\n");
     }
 
     uint32_t parentBlock = 0;
@@ -332,7 +307,11 @@ uint32_t traversePath(const Path &path, int depth) {
 
         const char *childName = path.getNameCString(i);
         childBlock = findBlock(&parentDirectory, childName);
-        
+        if (!childBlock) {
+            string message = string("Directory \"") + string(childName) + string("\" does not exist\n");
+            throw std::runtime_error(message);
+        }
+
         //TODO: get lock for child
         //TODO: release lock for parent
 
@@ -356,5 +335,6 @@ uint32_t findBlock(fs_inode *parent, const char *name) {
             }
         }
     }
+
     return 0;
 }
