@@ -149,15 +149,10 @@ void createRequest(Request *request) {
         throw e;
     }
 
-<<<<<<< HEAD
-    uint32_t file_block = blockManager.getFreeBlock();
-    
     //create new lock for this file and aquire it
     lockManager.createLock(file_block);
     lockManager.aquireWriteLock(file_block);
 
-=======
->>>>>>> master
     disk_writeblock(file_block, &new_inode);
 
     //If an empty directory listing could not be found for a block,
@@ -200,12 +195,13 @@ void deleteRequest(Request *request) {
 
     const char *filename = path->getNameCString(path->depth() - 1);
 
+    //writer lock aquired on dir_inode_block
     uint32_t dir_inode_block = traversePath(request, *path, path->depth() - 1);
-    fs_inode inode;
+    fs_inode parent_inode, file_inode;
 
-    disk_readblock(dir_inode_block, &inode);
+    disk_readblock(dir_inode_block, &parent_inode);
 
-    if (strcmp(inode.owner, request.getUsername().c_str())) {
+    if (strcmp(parent_inode.owner, request.getUsername().c_str())) {
         throw std::runtime_error("You do not own this directory\n");
     }
 
@@ -221,6 +217,7 @@ void deleteRequest(Request *request) {
         blockManager.freeBlock(inode.blocks[i]);
     }
 
+    //TODO check ownership before we do any damage
     blockManager.freeBlock(blockToDelete);
 }
 
@@ -252,6 +249,7 @@ bool findDirentry(fs_inode *dir_inode, const char *filename, uint32_t *direntry_
     return found;
 }
 
+//TODO make this function kinda work like find
 //Deletes the direntry containing file_block from dir_inode. May edit dir_inode if removing the entry causes
 //the block to no longer be used
 uint32_t removeDirentry(fs_inode *dir_inode, const uint32_t dir_inode_block, const char *filename) {
