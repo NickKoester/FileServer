@@ -35,9 +35,10 @@ void readRequest(Request *request) {
     fs_inode file_inode;
 
     Path *path = request->getPath();
-    uint32_t file_inode_blocknum = traversePath(*path, path->depth());
 
-    //TODO need reader lock on inode
+    //this function returns with the reader lock of file
+    uint32_t file_inode_blocknum = traversePath(*path, path->depth(), false);
+
     disk_readblock(file_inode_blocknum, &file_inode);
 
     if (file_inode.type != 'f') {
@@ -45,12 +46,11 @@ void readRequest(Request *request) {
     }
 
     uint32_t data_block = file_inode.blocks[request->getBlock()];
-    //TODO unlock inode
 
-
-    //TODO need reader lock on data
     disk_readblock(data_block, request->getData());
-    //TODO unlock data
+
+    //releases lock that was aquired in the traversePath function
+    lockManager.releaseReadLock(file_inode_blocknum);
 }
 
 void writeRequest(Request *request) {
@@ -62,7 +62,9 @@ void writeRequest(Request *request) {
     fs_inode file_inode;
 
     Path *path = request->getPath();
-    uint32_t file_inode_blocknum = traversePath(*path, path->depth());
+
+    //writer lock will be aquired from this function
+    uint32_t file_inode_blocknum = traversePath(*path, path->depth(), true);
 
     //need reader lock on inode
     disk_readblock(file_inode_blocknum, &file_inode);
@@ -121,6 +123,10 @@ void createRequest(Request *request) {
     if (parent_inode.type != 'd') {
         string message = string("\"")                           +
                          path->getNameString(path->depth() - 2) +
+                         string("\" is not a directory\n");
+        throw std::runtime_error(message);
+    }
+
                          string("\" is not a directory\n");
         throw std::runtime_error(message);
     }
@@ -219,10 +225,6 @@ uint32_t removeDirentry(fs_inode *dir_inode, const uint32_t dir_inode_block, con
     bool empty = true;
 
     //Checks for direntry in each data block of the directory
-    for (uint32_t i = 0; i < dir_inode->size; i++) {
-        data_block = dir_inode->blocks[i];
-        disk_readblock(data_block, block_buffer);
-
         //Checks if the direntry is in the block in block_buffer
         for (uint32_t j = 0; j < FS_DIRENTRIES; j++) {
 
@@ -298,10 +300,42 @@ char* createResponse(Request *request, unsigned &response_size) {
     return res;
 }
 
+char* createGoodResponse(Request *request, unsigned &response_size) {
+    string response = std::to_string(request->getSession()) + " " +
+                      std::to_string(request->getSequence());
+    char* res;
+
+    if(request->isReadRequest()) {
+        assert(request->getData());
+        string tmp(request->getData());
+        response_size = response.size() + FS_BLOCKSIZE + 1;
+        res = new char[response_size];
+
+        unsigned i;
+        for (i=0; i<response.size(); ++i) {
+            res[i] = response[i];
+        }
+        res[i++] = '\0';
+
+        unsigned k;
+        for (k=0; k<FS_BLOCKSIZE; ++k) {
+            res[i + k] = request->getData()[k];
+        }
+    }
+    else {
+        response_size = response.size() + 1;
+        res = new char[response_size];
+        strcpy(res, response.c_str());
+    }
+ 
+    return res;
+}
+
 //This file returns the block number of file at the specified depth of the path
 // depth should be <= path.depth()
-// NOTE: reader lock of the inode you want will be aquired when this returns
-uint32_t traversePath(const Path &path, int depth) {
+// NOTE: lock of the inode you want will be aquired when this returns
+// 'write' should be true if you want to write lock, false if read lock
+uint32_t traversePath(const Path &path, int depth, bool write) {
 
     if(depth > path.depth()) {
         throw std::runtime_error("Invalid path\n");
@@ -310,12 +344,14 @@ uint32_t traversePath(const Path &path, int depth) {
     uint32_t parentBlock = 0;
     uint32_t childBlock = 0;
 
-    //TODO: get read lock for root directory
+    //get read lock for root directory
+    lockManager.aquireReadLock(parentBlock);
 
     for(int i = 0; i < depth; i++) {
         fs_inode parentDirectory;
         disk_readblock(parentBlock, &parentDirectory);
 
+        //checks that we dont try to traverse into a file
         if (parentDirectory.type != 'd') {
             string message = string("\"")              +
                              path.getNameString(i - 1) +
@@ -326,6 +362,7 @@ uint32_t traversePath(const Path &path, int depth) {
         const char *childName = path.getNameCString(i);
         childBlock = findBlock(&parentDirectory, childName);
 
+        //findBlock returns 0 if it doesnt exist in directory 
         if (!childBlock) {
             string message = string("Directory \"") +
                              string(childName)      +
@@ -333,8 +370,16 @@ uint32_t traversePath(const Path &path, int depth) {
             throw std::runtime_error(message);
         }
 
-        //TODO: get lock for child
-        //TODO: release lock for parent
+        //get lock for child
+        //optionally gets the write lock if requested
+        if ((i == depth - 1) && write) {
+            lockManager.aquireWriteLock(childBlock);
+        } else {
+            lockManager.aquireReadLock(childBlock);
+        }
+
+        //release lock for parent
+        lockManager.releaseReadLock(parentBlock);
 
         parentBlock = childBlock;
     }
