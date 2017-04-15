@@ -28,4 +28,7 @@ int main(int argc, char *argv[])
 
     fs_session("user2", "password2", &session2, seq2++);
     fs_create("user2", "password2", session2, seq2++, "/cats/file", 'f');
+    fs_create("user2", "password2", session2, seq2++, "/file", 'f');
+    fs_create("user2", "password2", session2, seq2++, "/file/dogs", 'f');
+    fs_create("user2", "password2", session2, seq2++, "/file/dogs/cats", 'f');
 }

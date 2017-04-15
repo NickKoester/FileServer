@@ -100,26 +100,37 @@ void createRequest(Request *request) {
     //
     //Want to
     //  Read up to parent directory
-    //    throw exception if unable
+    //    throw exception if unable (file in path or non-existant)
+    //  Check permisisions
+    //  Check if it already exists
+    //  Reserve blocks?
+    //  Then write inode and do other stuff
     //  Then proceed?
 
     uint32_t block = blockManager.getFreeBlock();
-    fs_inode inode;
+    fs_inode new_inode, parent_inode;
 
-    inode.type = request->getType();
-    strcpy(inode.owner, request->getUsername().c_str());
-    inode.size = 0;
-
-    //Write file inode to disk
-    disk_writeblock(block, &inode);
+    new_inode.type = request->getType();
+    strcpy(new_inode.owner, request->getUsername().c_str());
+    new_inode.size = 0;
 
     Path *path = request->getPath();
     uint32_t parent_inode_block = traversePath(*path, path->depth() - 1);
+    disk_readblock(parent_inode_block, &parent_inode);
 
-    disk_readblock(parent_inode_block, &inode);
+    if (parent_inode.type != 'd') {
+        string message = string("\"")                           +
+                         path->getNameString(path->depth() - 2) +
+                         string("\" is not a directory\n");
+        throw std::runtime_error(message);
+    }
 
     const char *name = path->getNameCString(path->depth() - 1);
-    addDirentry(&inode, parent_inode_block, name, block);
+
+    //Write file inode to disk
+    disk_writeblock(block, &new_inode);
+
+    addDirentry(&parent_inode, parent_inode_block, name, block);
 }
 
 void deleteRequest(Request *request) {
@@ -305,10 +316,20 @@ uint32_t traversePath(const Path &path, int depth) {
         fs_inode parentDirectory;
         disk_readblock(parentBlock, &parentDirectory);
 
+        if (parentDirectory.type != 'd') {
+            string message = string("\"")              +
+                             path.getNameString(i - 1) +
+                             string("\" is not a directory\n");
+            throw std::runtime_error(message);
+        }
+
         const char *childName = path.getNameCString(i);
         childBlock = findBlock(&parentDirectory, childName);
+
         if (!childBlock) {
-            string message = string("Directory \"") + string(childName) + string("\" does not exist\n");
+            string message = string("Directory \"") +
+                             string(childName)      +
+                             string("\" does not exist\n");
             throw std::runtime_error(message);
         }
 
