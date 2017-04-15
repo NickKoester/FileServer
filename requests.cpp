@@ -58,9 +58,6 @@ void readRequest(Request *request) {
 }
 
 void writeRequest(Request *request) {
-    //validate input
-    //  path is valid -> done during the traversal
-    //
     //  username owns file -> must be done after the tree is traversed
 
     fs_inode file_inode;
@@ -107,19 +104,14 @@ void writeRequest(Request *request) {
 }
 
 void createRequest(Request *request) {
-    //check that path exits
-    //check that there are free blocks
-    //
     //Want to
     //  Read up to parent directory
     //    throw exception if unable (file in path or non-existant)
     //  Check permisisions
-    //  Check if it already exists
     //  Reserve blocks?
-    //  Then write inode and do other stuff
-    //  Then proceed?
 
     fs_inode new_inode, parent_inode;
+    uint32_t file_block = blockManager.getFreeBlock();
 
     new_inode.type = request->getType();
     strcpy(new_inode.owner, request->getUsername().c_str());
@@ -135,6 +127,7 @@ void createRequest(Request *request) {
         string message = string("\"")                           +
                          path->getNameString(path->depth() - 2) +
                          string("\" is not a directory\n");
+        blockManager.freeBlock(file_block);
         throw std::runtime_error(message);
     }
 
@@ -152,15 +145,19 @@ void createRequest(Request *request) {
     try {
         found = findDirentry(&parent_inode, name, &direntry_block, &direntry_idx, direntries);
     } catch (std::runtime_error &e) {
+        blockManager.freeBlock(file_block);
         throw e;
     }
 
+<<<<<<< HEAD
     uint32_t file_block = blockManager.getFreeBlock();
     
     //create new lock for this file and aquire it
     lockManager.createLock(file_block);
     lockManager.aquireWriteLock(file_block);
 
+=======
+>>>>>>> master
     disk_writeblock(file_block, &new_inode);
 
     //If an empty directory listing could not be found for a block,
@@ -194,11 +191,15 @@ void deleteRequest(Request *request) {
     //validate inputs
     //
     //  check that username owns file
-    //  check that it has no files or subdirectories and not root directory
 
     Path *path = request->getPath();
+
+    if (!path->depth()) {
+        throw std::runtime_error("Unable to delete root directory\n");
+    }
+
     const char *filename = path->getNameCString(path->depth() - 1);
-    //uint32_t file_inode_block = traversePath(*path, path->depth());
+
     uint32_t dir_inode_block = traversePath(request, *path, path->depth() - 1);
     fs_inode inode;
 
@@ -208,10 +209,13 @@ void deleteRequest(Request *request) {
         throw std::runtime_error("You do not own this directory\n");
     }
 
-    //removeDirentry(&inode, dir_inode_block, file_inode_block);
     uint32_t blockToDelete = removeDirentry(&inode, dir_inode_block, filename);
 
     disk_readblock(blockToDelete, &inode);
+
+    if (inode.type == 'd' && inode.size != 0) {
+        throw std::runtime_error("Cannot delete non-empty directory\n");
+    }
     
     for (uint32_t i = 0; i < inode.size; i++) {
         blockManager.freeBlock(inode.blocks[i]);
@@ -220,9 +224,6 @@ void deleteRequest(Request *request) {
     blockManager.freeBlock(blockToDelete);
 }
 
-//Returns block that the free direntry is in
-//Probably also need the index of it
-//
 bool findDirentry(fs_inode *dir_inode, const char *filename, uint32_t *direntry_block, uint32_t *direntry_idx, fs_direntry *direntries) {
     uint32_t current_block = 0;
     bool found = false;
