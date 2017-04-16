@@ -1,5 +1,7 @@
 BlockManager.cpp
 BlockManager.h
+LockManager.cpp
+LockManager.h
 Path.cpp
 Path.h
 Request.cpp
@@ -10,6 +12,8 @@ SessionManager.cpp
 SessionManager.h
 requests.cpp
 requests.h
+RWLock.cpp
+RWLock.h
 server.cpp
 serverHelpers.cpp
 serverHelpers.h
@@ -24,4 +28,5 @@ testCreateDir.cpp
 testCreateF.cpp
 testDelete.cpp
 testInit.cpp
+testKitchenSink.cpp
 test04.cpp

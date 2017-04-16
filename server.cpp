@@ -72,8 +72,8 @@ int main(int argc, char *argv[])
     /********* SERVER STUFF *******/
     while (1) {
         int msg_fd = accept(sockfd, nullptr, nullptr);
-        //thread(requestHandler, msg_fd).join();
-        requestHandler(msg_fd);
+        thread(requestHandler, msg_fd).detach();
+        //requestHandler(msg_fd);
     }
        
     return 0;
