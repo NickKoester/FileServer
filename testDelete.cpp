@@ -66,4 +66,7 @@ int main(int argc, char *argv[])
     fs_delete("user1", "password1", session, seq++, "/dir/file18");
     fs_delete("user1", "password1", session, seq++, "/dir/file19");
     fs_delete("user1", "password1", session, seq++, "/dir/file20");
+    fs_delete("user1", "password1", session, seq++, "/dir");
+    fs_delete("user1", "password1", session, seq++, "/cats/dogs/mouse");
+    fs_delete("user1", "password1", session, seq++, "/cats");
 }

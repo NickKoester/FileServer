@@ -14,7 +14,6 @@ server.cpp
 serverHelpers.cpp
 serverHelpers.h
 test.cpp
-testPath.cpp
 testInvalidSession.cpp
 test01.cpp
 test02.cpp
