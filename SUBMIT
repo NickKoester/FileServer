@@ -19,6 +19,7 @@ serverHelpers.cpp
 serverHelpers.h
 test.cpp
 testInvalidSession.cpp
+testKitchenSink.cpp
 test01.cpp
 test02.cpp
 test03.cpp
