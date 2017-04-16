@@ -5,6 +5,7 @@
 #include "Session.h"
 #include "SessionManager.h"
 #include "BlockManager.h"
+#include "LockManager.h"
 #include "Path.h"
 #include <iostream>
 using std::cout;
@@ -12,6 +13,7 @@ using std::endl;
 using std::string;
 extern SessionManager sessionManager;
 extern BlockManager blockManager;
+extern LockManager lockManager;
 
 void sessionRequest(Request *request) {
     Session *newSesh = new Session(request->getSequence(), request->getUsername().c_str());
@@ -42,10 +44,12 @@ void readRequest(Request *request) {
     disk_readblock(file_inode_blocknum, &file_inode);
 
     if (file_inode.type != 'f') {
+        lockManager.releaseReadLock(file_inode_blocknum);
         throw std::runtime_error("Cannot read from directory\n");
     }
 
-    if (strcmp(file_inode.owner, request.getUsername().c_str())) {
+    if (strcmp(file_inode.owner, request->getUsername().c_str())) {
+        lockManager.releaseReadLock(file_inode_blocknum);
         throw std::runtime_error("You do not own this file\n");
     }
 
@@ -67,14 +71,15 @@ void writeRequest(Request *request) {
     //writer lock will be aquired from this function
     uint32_t file_inode_blocknum = traversePath(request, *path, path->depth(), true);
 
-    //need reader lock on inode
     disk_readblock(file_inode_blocknum, &file_inode);
 
     if (file_inode.type != 'f') {
+        lockManager.releaseWriteLock(file_inode_blocknum);
         throw std::runtime_error("Cannot write to directory\n");
     }
 
-    if (strcmp(file_inode.owner, request.getUsername().c_str())) {
+    if (strcmp(file_inode.owner, request->getUsername().c_str())) {
+        lockManager.releaseWriteLock(file_inode_blocknum);
         throw std::runtime_error("You do not own this file\n");
     }
 
@@ -89,6 +94,7 @@ void writeRequest(Request *request) {
         data_block = blockManager.getFreeBlock();
         added = true;
     } else {
+        lockManager.releaseWriteLock(file_inode_blocknum);
         throw std::runtime_error("Writes must occur sequentially\n");
     }
 
@@ -128,10 +134,13 @@ void createRequest(Request *request) {
                          path->getNameString(path->depth() - 2) +
                          string("\" is not a directory\n");
         blockManager.freeBlock(file_block);
+        lockManager.releaseWriteLock(parent_inode_block);
         throw std::runtime_error(message);
     }
 
-    if (strcmp(parent_inode.owner, request.getUsername().c_str())) {
+    //checks that we own directory,  short circuits if parent_inode_block is 0
+    if (parent_inode_block && strcmp(parent_inode.owner, request->getUsername().c_str())) {
+        lockManager.releaseWriteLock(parent_inode_block);
         throw std::runtime_error("You do not own this directory\n");
     }
 
@@ -143,9 +152,10 @@ void createRequest(Request *request) {
     fs_direntry direntries[FS_DIRENTRIES];
 
     try {
-        found = findDirentry(&parent_inode, name, &direntry_block, &direntry_idx, direntries);
+        found = findEmptyDirentry(&parent_inode, name, &direntry_block, &direntry_idx, direntries);
     } catch (std::runtime_error &e) {
         blockManager.freeBlock(file_block);
+        lockManager.releaseWriteLock(parent_inode_block);
         throw e;
     }
 
@@ -196,32 +206,64 @@ void deleteRequest(Request *request) {
     const char *filename = path->getNameCString(path->depth() - 1);
 
     //writer lock aquired on dir_inode_block
-    uint32_t dir_inode_block = traversePath(request, *path, path->depth() - 1);
+    uint32_t parent_inode_block = traversePath(request, *path, path->depth() - 1, true);
+
     fs_inode parent_inode, file_inode;
+    fs_direntry direntries[FS_DIRENTRIES];
 
-    disk_readblock(dir_inode_block, &parent_inode);
+    disk_readblock(parent_inode_block, &parent_inode);
 
-    if (strcmp(parent_inode.owner, request.getUsername().c_str())) {
+    //checks that we own this file -- short circuits if root directory
+    if (parent_inode_block && strcmp(parent_inode.owner, request->getUsername().c_str())) {
+        lockManager.releaseWriteLock(parent_inode_block);
         throw std::runtime_error("You do not own this directory\n");
     }
 
-    uint32_t blockToDelete = removeDirentry(&inode, dir_inode_block, filename);
+    uint32_t file_inode_block = 0;
+    uint32_t direntry_idx = 0;
+    uint32_t direntry_block = 0;
 
-    disk_readblock(blockToDelete, &inode);
+    try {
+        file_inode_block = findExistingDirentry(&parent_inode, filename, &direntry_idx,  &direntry_block, direntries);
+    } catch (std::runtime_error &e) {
+        lockManager.releaseWriteLock(parent_inode_block);
+        throw e;
+    }
 
-    if (inode.type == 'd' && inode.size != 0) {
+    //writer lock aquired on file
+    lockManager.aquireWriteLock(file_inode_block);
+
+    disk_readblock(file_inode_block, &file_inode);
+
+    //check that directory is empty before delete
+    if (file_inode.type == 'd' && file_inode.size != 0) {
+        lockManager.releaseWriteLock(parent_inode_block);
+        lockManager.releaseWriteLock(file_inode_block);
         throw std::runtime_error("Cannot delete non-empty directory\n");
     }
-    
-    for (uint32_t i = 0; i < inode.size; i++) {
-        blockManager.freeBlock(inode.blocks[i]);
+
+    //check that we own this entity before delete
+    if (strcmp(file_inode.owner, request->getUsername().c_str())) {
+        lockManager.releaseWriteLock(parent_inode_block);
+        lockManager.releaseWriteLock(file_inode_block);
+        throw std::runtime_error("You do not own this directory\n");
     }
 
-    //TODO check ownership before we do any damage
-    blockManager.freeBlock(blockToDelete);
+    removeDirentry(&parent_inode, parent_inode_block, direntry_idx, direntries, direntry_block);
+    
+    for (uint32_t i = 0; i < file_inode.size; i++) {
+        blockManager.freeBlock(file_inode.blocks[i]);
+    }
+
+    lockManager.releaseWriteLock(file_inode_block);
+    lockManager.deleteLock(file_inode_block); 
+
+    blockManager.freeBlock(file_inode_block);
+
+    lockManager.releaseWriteLock(parent_inode_block);
 }
 
-bool findDirentry(fs_inode *dir_inode, const char *filename, uint32_t *direntry_block, uint32_t *direntry_idx, fs_direntry *direntries) {
+bool findEmptyDirentry(fs_inode *dir_inode, const char *filename, uint32_t *direntry_block, uint32_t *direntry_idx, fs_direntry *direntries) {
     uint32_t current_block = 0;
     bool found = false;
     fs_direntry direntry_buffer[FS_DIRENTRIES];
@@ -249,36 +291,36 @@ bool findDirentry(fs_inode *dir_inode, const char *filename, uint32_t *direntry_
     return found;
 }
 
-//TODO make this function kinda work like find
-//Deletes the direntry containing file_block from dir_inode. May edit dir_inode if removing the entry causes
-//the block to no longer be used
-uint32_t removeDirentry(fs_inode *dir_inode, const uint32_t dir_inode_block, const char *filename) {
-    uint32_t data_block, freeBlock, direntry_idx = 0;
-    char buffer[FS_BLOCKSIZE];
-    fs_direntry *block_buffer = (fs_direntry *) buffer;
-    bool empty = true;
-
+uint32_t findExistingDirentry(fs_inode *dir_inode, const char *filename, uint32_t *direntry_idx, uint32_t *direntry_block, fs_direntry *direntries) {
     //Checks for direntry in each data block of the directory
+    for (uint32_t i = 0; i < dir_inode->size; i++) {
+        *direntry_block = dir_inode->blocks[i];
+        *direntry_idx = i;
+        disk_readblock(*direntry_block, direntries);
+
         //Checks if the direntry is in the block in block_buffer
         for (uint32_t j = 0; j < FS_DIRENTRIES; j++) {
 
             //if this is the file
-            if (!strcmp(block_buffer[j].name, filename)) {
-                freeBlock = block_buffer[j].inode_block; 
-                block_buffer[j].inode_block = 0;
-                direntry_idx = i;
-                goto exit;
+            if (!strcmp(direntries[j].name, filename)) {
+                uint32_t freeBlock = direntries[j].inode_block; 
+                direntries[j].inode_block = 0;
+                memset(&direntries[j].name, 0, FS_MAXFILENAME + 1);
+
+                return freeBlock;
             }
         }
     }
 
-    //Throws exception if file to delete was not found
     throw std::runtime_error("File does not exist\n");
+}
 
-exit:
+void removeDirentry(fs_inode *dir_inode, uint32_t dir_inode_block, uint32_t direntry_idx, fs_direntry *direntries, uint32_t direntry_block) {
+    bool empty = true;
+
     //If the direntry block is now empty, it must be removed from the directory inode
     for (uint32_t i = 0; i < FS_DIRENTRIES; i++) {
-        if (block_buffer[i].inode_block != 0) empty = false;
+        if (direntries[i].inode_block != 0) empty = false;
     }
 
     //Updates the inode if a direntry block had to be freed. Since the block is no longer
@@ -293,12 +335,12 @@ exit:
 
         disk_writeblock(dir_inode_block, dir_inode);
 
-        blockManager.freeBlock(data_block);
+        blockManager.freeBlock(direntry_block);
     } else {
-        disk_writeblock(data_block, block_buffer);
+        disk_writeblock(direntry_block, direntries);
     }
-    return freeBlock;
 }
+
 
 // creates the <sessionnumber> <sequencenumber><NULL>(<data> if readblock)
 // returns size of this response
@@ -375,23 +417,29 @@ uint32_t traversePath(Request *request, const Path &path, int depth, bool write)
         throw std::runtime_error("Invalid path\n");
     }
 
-    char *username = request.getUsername().c_str();
+    const char *username = request->getUsername().c_str();
 
     uint32_t parentBlock = 0;
     uint32_t childBlock = 0;
 
-    //get read lock for root directory
-    lockManager.aquireReadLock(parentBlock);
+    //write == true and depth == 0 implies that we want write permissions
+    //for the root directory.  Otherwise we only need read permission
+    if ((depth == 0) && write) {
+        lockManager.aquireWriteLock(parentBlock);
+    } else {
+        lockManager.aquireReadLock(parentBlock);
+    }
 
     for(int i = 0; i < depth; i++) {
         fs_inode parentDirectory;
         disk_readblock(parentBlock, &parentDirectory);
 
         //checks that we have permission to access this file
-        if((parentBlock && strcmp(parentDirectory.owner, username)) {
+        if((parentBlock && strcmp(parentDirectory.owner, username))) {
             string message = string("\"")              +
                              path.getNameString(i - 1) +
                              string("\" permission denied.\n");
+            lockManager.releaseReadLock(parentBlock);
             throw std::runtime_error(message);
 
         }
@@ -401,6 +449,7 @@ uint32_t traversePath(Request *request, const Path &path, int depth, bool write)
             string message = string("\"")              +
                              path.getNameString(i - 1) +
                              string("\" is not a directory\n");
+            lockManager.releaseReadLock(parentBlock);
             throw std::runtime_error(message);
         }
 
@@ -412,6 +461,7 @@ uint32_t traversePath(Request *request, const Path &path, int depth, bool write)
             string message = string("Directory \"") +
                              string(childName)      +
                              string("\" does not exist\n");
+            lockManager.releaseReadLock(parentBlock);
             throw std::runtime_error(message);
         }
 

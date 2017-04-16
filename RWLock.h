@@ -12,9 +12,9 @@ public:
     void writerStart();
     void writerFinish();
 private:
-    std::unique_lock<std::mutex> rwLock;
-    std::condition_variable cvReaders;
-    std::condition_variable cvWriters;
+    std::mutex rwLock;
+    std::condition_variable_any cvReaders;
+    std::condition_variable_any cvWriters;
 
     size_t numReaders;
     size_t numWriters;
