@@ -14,7 +14,6 @@ server.cpp
 serverHelpers.cpp
 serverHelpers.h
 test.cpp
-testPath.cpp
 testInvalidSession.cpp
 test01.cpp
 test02.cpp
@@ -23,5 +22,6 @@ testSpec.cpp
 testSession.cpp
 testCreateDir.cpp
 testCreateF.cpp
+testDelete.cpp
 testInit.cpp
 test04.cpp
