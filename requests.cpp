@@ -126,7 +126,7 @@ void createRequest(Request *request) {
     fs_direntry direntries[FS_DIRENTRIES];
 
     try {
-        found = findDirentry(&parent_inode, name, &direntry_block, &direntry_idx, direntries);
+        found = findEmptyDirentry(&parent_inode, name, &direntry_block, &direntry_idx, direntries);
     } catch (std::runtime_error &e) {
         blockManager.freeBlock(file_block);
         throw e;
@@ -170,27 +170,38 @@ void deleteRequest(Request *request) {
     }
 
     const char *filename = path->getNameCString(path->depth() - 1);
-    uint32_t dir_inode_block = traversePath(*path, path->depth() - 1);
-    fs_inode inode;
+    uint32_t parent_inode_block = traversePath(*path, path->depth() - 1);
+    fs_inode parent_inode, file_inode;
+    fs_direntry direntries[FS_DIRENTRIES];
 
-    disk_readblock(dir_inode_block, &inode);
+    disk_readblock(parent_inode_block, &parent_inode);
 
-    uint32_t blockToDelete = removeDirentry(&inode, dir_inode_block, filename);
+    uint32_t file_inode_block = 0;
+    uint32_t direntry_idx = 0;
+    uint32_t direntry_block = 0;
 
-    disk_readblock(blockToDelete, &inode);
+    try {
+        file_inode_block = findExistingDirentry(&parent_inode, filename, &direntry_idx,  &direntry_block, direntries);
+    } catch (std::runtime_error &e) {
+        throw e;
+    }
 
-    if (inode.type == 'd' && inode.size != 0) {
+    disk_readblock(file_inode_block, &file_inode);
+
+    if (file_inode.type == 'd' && file_inode.size != 0) {
         throw std::runtime_error("Cannot delete non-empty directory\n");
     }
+
+    removeDirentry(&parent_inode, parent_inode_block, direntry_idx, direntries, direntry_block);
     
-    for (uint32_t i = 0; i < inode.size; i++) {
-        blockManager.freeBlock(inode.blocks[i]);
+    for (uint32_t i = 0; i < file_inode.size; i++) {
+        blockManager.freeBlock(file_inode.blocks[i]);
     }
 
-    blockManager.freeBlock(blockToDelete);
+    blockManager.freeBlock(file_inode_block);
 }
 
-bool findDirentry(fs_inode *dir_inode, const char *filename, uint32_t *direntry_block, uint32_t *direntry_idx, fs_direntry *direntries) {
+bool findEmptyDirentry(fs_inode *dir_inode, const char *filename, uint32_t *direntry_block, uint32_t *direntry_idx, fs_direntry *direntries) {
     uint32_t current_block = 0;
     bool found = false;
     fs_direntry direntry_buffer[FS_DIRENTRIES];
@@ -218,39 +229,36 @@ bool findDirentry(fs_inode *dir_inode, const char *filename, uint32_t *direntry_
     return found;
 }
 
-//Deletes the direntry containing file_block from dir_inode. May edit dir_inode if removing the entry causes
-//the block to no longer be used
-uint32_t removeDirentry(fs_inode *dir_inode, const uint32_t dir_inode_block, const char *filename) {
-    uint32_t data_block, freeBlock, direntry_idx = 0;
-    char buffer[FS_BLOCKSIZE];
-    fs_direntry *block_buffer = (fs_direntry *) buffer;
-    bool empty = true;
-
+uint32_t findExistingDirentry(fs_inode *dir_inode, const char *filename, uint32_t *direntry_idx, uint32_t *direntry_block, fs_direntry *direntries) {
     //Checks for direntry in each data block of the directory
     for (uint32_t i = 0; i < dir_inode->size; i++) {
-        data_block = dir_inode->blocks[i];
-        disk_readblock(data_block, block_buffer);
+        *direntry_block = dir_inode->blocks[i];
+        *direntry_idx = i;
+        disk_readblock(*direntry_block, direntries);
 
         //Checks if the direntry is in the block in block_buffer
         for (uint32_t j = 0; j < FS_DIRENTRIES; j++) {
 
             //if this is the file
-            if (!strcmp(block_buffer[j].name, filename)) {
-                freeBlock = block_buffer[j].inode_block; 
-                block_buffer[j].inode_block = 0;
-                direntry_idx = i;
-                goto exit;
+            if (!strcmp(direntries[j].name, filename)) {
+                uint32_t freeBlock = direntries[j].inode_block; 
+                direntries[j].inode_block = 0;
+                memset(&direntries[j].name, 0, FS_MAXFILENAME + 1);
+
+                return freeBlock;
             }
         }
     }
 
-    //Throws exception if file to delete was not found
     throw std::runtime_error("File does not exist\n");
+}
 
-exit:
+void removeDirentry(fs_inode *dir_inode, uint32_t dir_inode_block, uint32_t direntry_idx, fs_direntry *direntries, uint32_t direntry_block) {
+    bool empty = true;
+
     //If the direntry block is now empty, it must be removed from the directory inode
     for (uint32_t i = 0; i < FS_DIRENTRIES; i++) {
-        if (block_buffer[i].inode_block != 0) empty = false;
+        if (direntries[i].inode_block != 0) empty = false;
     }
 
     //Updates the inode if a direntry block had to be freed. Since the block is no longer
@@ -265,12 +273,12 @@ exit:
 
         disk_writeblock(dir_inode_block, dir_inode);
 
-        blockManager.freeBlock(data_block);
+        blockManager.freeBlock(direntry_block);
     } else {
-        disk_writeblock(data_block, block_buffer);
+        disk_writeblock(direntry_block, direntries);
     }
-    return freeBlock;
 }
+
 
 // creates the <sessionnumber> <sequencenumber><NULL>(<data> if readblock)
 // returns size of this response
