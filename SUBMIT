@@ -18,8 +18,6 @@ server.cpp
 serverHelpers.cpp
 serverHelpers.h
 test.cpp
-testInvalidSession.cpp
-testKitchenSink.cpp
 test01.cpp
 test02.cpp
 test03.cpp
@@ -29,5 +27,6 @@ testCreateDir.cpp
 testCreateF.cpp
 testDelete.cpp
 testInit.cpp
+testInvalidSession.cpp
 testKitchenSink.cpp
 test04.cpp
