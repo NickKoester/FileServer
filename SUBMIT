@@ -28,6 +28,7 @@ testSession.cpp
 testCreateDir.cpp
 testCreateF.cpp
 testDelete.cpp
+testPath.cpp
 testInit.cpp
 testInvalidSession.cpp
 testKitchenSink.cpp

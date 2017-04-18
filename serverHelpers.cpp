@@ -33,9 +33,8 @@ void requestHandler(int sockfd) {
     const char* password = passwordStr.c_str(); 
     request.parseRequestAndDecrypt(password);
    
-    request.parseRequestParameters();
-
     try {
+        request.parseRequestParameters();
         request.validateInput();
     } catch (std::runtime_error &e) {
         cout_lock.lock();

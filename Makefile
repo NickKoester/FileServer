@@ -2,7 +2,7 @@ FLAGS = -std=c++11 -Wall -Werror -Wextra -pedantic -g
 
 OBJ = server.o BlockManager.o Request.o Session.o SessionManager.o requests.o Path.o serverHelpers.o RWLock.o LockManager.o UserManager.o
 
-all: server test andrew spec testInvalidSession delete sink
+all: server test andrew spec testInvalidSession delete sink errors path
 
 %.o: %.cpp
 	g++ $(FLAGS) -c -o $@ $^
@@ -20,6 +20,8 @@ testInvalidSession: testInvalidSession.cpp libfs_client.o
 delete: testDelete.cpp libfs_client.o
 	g++ $(FLAGS) -o $@ $^
 sink: testKitchenSink.cpp libfs_client.o
+	g++ $(FLAGS) -o $@ $^
+path: testPath.cpp libfs_client.o
 	g++ $(FLAGS) -o $@ $^
 
 clean:

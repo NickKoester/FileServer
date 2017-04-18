@@ -59,6 +59,11 @@ void readRequest(Request *request) {
         throw std::runtime_error("You do not own this file\n");
     }
 
+    if (file_inode.size <= request->getBlock()) {
+        lockManager.releaseReadLock(file_inode_blocknum);
+        throw std::runtime_error("Invalid read");
+    }
+
     uint32_t data_block = file_inode.blocks[request->getBlock()];
 
     disk_readblock(data_block, request->getData());

@@ -123,7 +123,11 @@ void Request::parseRequestParameters() {
     if (request_type == SESSION) return;
 
     string pathString = getPathString(i);
-    path = new Path(pathString.c_str());
+    try {
+        path = new Path(pathString.c_str());
+    } catch (std::runtime_error &e) {
+        throw e;
+    }
 
     if (request_type == READBLOCK || 
         request_type == WRITEBLOCK) 
@@ -157,9 +161,12 @@ int Request::getNextInteger(int &index) {
 //delimiter (' ' or '\n')
 string Request::getPathString(int &index) {
     uint32_t i;
-    char path[FS_MAXFILENAME + 1];
+    char path[FS_MAXPATHNAME + 1];
 
     for (i = 0; request[index] != ' ' && request[index] != '\0'; i++, index++) {
+        if (i >= FS_MAXPATHNAME) {
+            throw std::runtime_error("Path exceeds maximum length\n");
+        }
         path[i] = request[index];
     }
 
