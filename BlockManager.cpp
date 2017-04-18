@@ -1,9 +1,15 @@
 #include <vector>
 #include "fs_server.h"
 #include "BlockManager.h"
+#include "LockManager.h"
+
 using namespace std;
 
+extern LockManager lockManager;
+
 void BlockManager::initialize() {
+    blockLock.lock();
+
     //keep track of whats free
     vector<bool> isFree(FS_DISKSIZE, true);
 
@@ -17,7 +23,11 @@ void BlockManager::initialize() {
         uint32_t blocknum = traverseQueue.front();
         traverseQueue.pop();
 
+        lockManager.createLock(blocknum);
+
         isFree[blocknum] = false;
+
+        lockManager.aquireReadLock(blocknum);
 
         //read inode of currentNode
         disk_readblock(blocknum, &currentNode);
@@ -38,10 +48,13 @@ void BlockManager::initialize() {
                 uint32_t inode_block = direntries[j].inode_block;
 
                 if(inode_block != 0) {
+                    //pushes inode blocks onto the queue
                     traverseQueue.push(inode_block);
                 }
             }
         }
+
+        lockManager.releaseReadLock(blocknum);
     }
 
     for(size_t i = 0; i < isFree.size(); i++) {
@@ -49,14 +62,24 @@ void BlockManager::initialize() {
             freeBlocks.push(i);
         }
     }
+
+   blockLock.unlock();
 }
 
 uint32_t BlockManager::getFreeBlock() {
+    blockLock.lock();
+
     uint32_t freeBlock = freeBlocks.front();
     freeBlocks.pop();
+
+    blockLock.unlock();
     return freeBlock;
 }
 
 void BlockManager::freeBlock(uint32_t block) {
+    blockLock.lock();
+
     freeBlocks.push(block);
+
+    blockLock.unlock();
 }

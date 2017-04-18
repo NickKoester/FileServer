@@ -23,6 +23,8 @@ bool findEmptyDirentry(fs_inode *dir_inode, const char *filename, uint32_t *dire
 uint32_t findExistingDirentry(fs_inode *dir_inode, const char *filename, uint32_t *direntry_idx, uint32_t *direntry_block, fs_direntry *direntries);
 void removeDirentry(fs_inode *dir_inode, uint32_t dir_inode_block, uint32_t direntry_idx, fs_direntry *direntries, uint32_t direntry_block);
 uint32_t findBlock(fs_inode *parent, const char *name);
-uint32_t traversePath(const Path &path, int depth);
+uint32_t traversePath(Request *request, const Path &path, int depth, bool write);
+
+bool isOwner(fs_inode*, Request*);
 
 #endif

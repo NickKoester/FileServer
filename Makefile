@@ -1,13 +1,14 @@
-FLAGS = -std=c++11 -Wall -Werror -Wextra -pedantic -ldl -g
-OBJ = server.o BlockManager.o Request.o Session.o SessionManager.o requests.o Path.o serverHelpers.o
+FLAGS = -std=c++11 -Wall -Werror -Wextra -pedantic -g
 
-all: server test andrew spec testInvalidSession delete sink errors path
+OBJ = server.o BlockManager.o Request.o Session.o SessionManager.o requests.o Path.o serverHelpers.o RWLock.o LockManager.o UserManager.o
+
+all: server test andrew spec testInvalidSession delete sink path
 
 %.o: %.cpp
 	g++ $(FLAGS) -c -o $@ $^
 
 server: $(OBJ) libfs_server.o
-	g++ $(FLAGS) $^ -o $@
+	g++ $(FLAGS) $^ -o $@ -ldl -pthread
 test: test.cpp libfs_client.o
 	g++ $(FLAGS) -o $@ $^
 andrew: testReadblock.cpp libfs_client.o
