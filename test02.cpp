@@ -24,15 +24,17 @@ int main(int argc, char* argv[])
     const char* username = "user1";
     const char* password = "password1";
     unsigned session = 0;
-    unsigned seq = 0;
+    unsigned seq = 3;
 
     char buf[FS_BLOCKSIZE];
 
     fs_clientinit(server, port);
     fs_session(username, password, &session, seq++);
     fs_create(username, password, session, seq++, "/andrew", 'd');
+    seq++;
     fs_create(username, password, session, seq++, "/andrew/hi", 'd');
     fs_delete(username, password, session, seq++, "/andrew/hi");
+    seq += 10;
     fs_create(username, password, session, seq++, "/andrew/hi", 'd');
     fs_delete(username, password, session, seq++, "/andrew/hi");
     fs_create(username, password, session, seq++, "/andrew/hi", 'f');
