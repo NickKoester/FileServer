@@ -3,6 +3,7 @@
 
 #include <string>
 #include "SessionManager.h"
+#include "fs_server.h"
 #include "Path.h"
 
 extern SessionManager sessionManager;
@@ -43,6 +44,8 @@ public:
     bool isReadRequest();
 
     void validateInput();
+
+    bool isOwner(fs_inode &inode);
 
     ~Request();
 

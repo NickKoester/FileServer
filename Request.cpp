@@ -224,3 +224,7 @@ Request::~Request() {
     delete path;
     delete[] data;
 }
+
+bool Request::isOwner(fs_inode &inode) {
+    return !strcmp(inode.owner, this->getUsername().c_str());
+}
