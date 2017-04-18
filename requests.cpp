@@ -34,6 +34,10 @@ void readRequest(Request *request) {
     //read the correct block
     //return char* to the data
     
+    if (request->getBlock() >= FS_MAXFILEBLOCKS) {
+        throw std::runtime_error("Invalid read\n");
+    }
+
     fs_inode file_inode;
 
     Path *path = request->getPath();
@@ -61,7 +65,7 @@ void readRequest(Request *request) {
 
     if (file_inode.size <= request->getBlock()) {
         lockManager.releaseReadLock(file_inode_blocknum);
-        throw std::runtime_error("Invalid read");
+        throw std::runtime_error("Invalid read\n");
     }
 
     uint32_t data_block = file_inode.blocks[request->getBlock()];
@@ -74,6 +78,11 @@ void readRequest(Request *request) {
 
 void writeRequest(Request *request) {
     //  username owns file -> must be done after the tree is traversed
+
+    unsigned block = request->getBlock();
+    if (block >= FS_MAXFILEBLOCKS) {
+        throw std::runtime_error("File exceeds maximum size\n");
+    }
 
     fs_inode file_inode;
 
@@ -102,8 +111,6 @@ void writeRequest(Request *request) {
 
     uint32_t data_block = -1;
     bool added = false;
-
-    unsigned block = request->getBlock();
 
     if (block < file_inode.size) {
         data_block = file_inode.blocks[block];
@@ -195,6 +202,10 @@ void createRequest(Request *request) {
     //be filled with 0's (or at least just inode_block) so they are known
     //to be free
     if (!found) {
+        if (parent_inode.size == FS_MAXFILEBLOCKS) {
+            throw std::runtime_error("Directory is full\n");
+        }
+
         memset(direntries, 0, FS_DIRENTRIES * sizeof(fs_direntry));
 
         direntry_block = blockManager.getFreeBlock();
