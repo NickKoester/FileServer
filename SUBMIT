@@ -17,6 +17,8 @@ RWLock.h
 server.cpp
 serverHelpers.cpp
 serverHelpers.h
+UserManager.cpp
+UserManager.h
 test.cpp
 test01.cpp
 test02.cpp

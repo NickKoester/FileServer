@@ -38,8 +38,14 @@ void readRequest(Request *request) {
 
     Path *path = request->getPath();
 
-    //this function returns with the reader lock of file
-    uint32_t file_inode_blocknum = traversePath(request, *path, path->depth(), false);
+    uint32_t file_inode_blocknum;
+    try {
+        //this function returns with the reader lock of file
+        //unless exception is thrown
+        file_inode_blocknum = traversePath(request, *path, path->depth(), false);
+    } catch (std::runtime_error &e) {
+        throw e;
+    }
 
     disk_readblock(file_inode_blocknum, &file_inode);
 
@@ -68,8 +74,14 @@ void writeRequest(Request *request) {
 
     Path *path = request->getPath();
 
-    //writer lock will be aquired from this function
-    uint32_t file_inode_blocknum = traversePath(request, *path, path->depth(), true);
+    uint32_t file_inode_blocknum;
+    try {
+        //writer lock will be aquired from this function
+        //unless exception is thrown
+        file_inode_blocknum = traversePath(request, *path, path->depth(), true);
+    } catch (std::runtime_error &e) {
+        throw e;
+    }
 
     disk_readblock(file_inode_blocknum, &file_inode);
 
@@ -125,8 +137,15 @@ void createRequest(Request *request) {
 
     Path *path = request->getPath();
 
-    //writer lock is aquired for this directory
-    uint32_t parent_inode_block = traversePath(request, *path, path->depth() - 1, true);
+    uint32_t parent_inode_block;
+    try {
+        //writer lock is aquired for this directory
+        //unless exception is thrown
+        parent_inode_block = traversePath(request, *path, path->depth() - 1, true);
+    } catch (std::runtime_error &e) {
+        throw e;
+    }
+    
     disk_readblock(parent_inode_block, &parent_inode);
 
     if (parent_inode.type != 'd') {
@@ -140,6 +159,7 @@ void createRequest(Request *request) {
 
     //checks that we own directory,  short circuits if parent_inode_block is 0
     if (parent_inode_block && isOwner(parent_inode, request)) {
+        blockManager.freeBlock(file_block);
         lockManager.releaseWriteLock(parent_inode_block);
         throw std::runtime_error("You do not own this directory\n");
     }
@@ -205,8 +225,14 @@ void deleteRequest(Request *request) {
 
     const char *filename = path->getNameCString(path->depth() - 1);
 
-    //writer lock aquired on dir_inode_block
-    uint32_t parent_inode_block = traversePath(request, *path, path->depth() - 1, true);
+    uint32_t parent_inode_block;
+    try {
+        //writer lock aquired on dir_inode_block
+        //unless exception is thrown
+        parent_inode_block = traversePath(request, *path, path->depth() - 1, true);
+    } catch (std::runtime_error &e) {
+        throw e;
+    }
 
     fs_inode parent_inode, file_inode;
     fs_direntry direntries[FS_DIRENTRIES];
