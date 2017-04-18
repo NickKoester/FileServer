@@ -44,6 +44,9 @@ void readRequest(Request *request) {
         throw std::runtime_error("Cannot read from directory\n");
     }
 
+    if (file_inode.size <= request->getBlock()) {
+        throw std::runtime_error("Invalid read");
+    }
     uint32_t data_block = file_inode.blocks[request->getBlock()];
     //TODO unlock inode
 

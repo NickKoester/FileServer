@@ -52,6 +52,8 @@ int main(int argc, char *argv[])
     fs_create("user1", "password1", session, seq++, "/dir/cats/cat2", 'd');
     fs_create("user1", "password1", session, seq++, "/dir/cats/cat3", 'd');
     fs_create("user1", "password1", session, seq++, "/dir/cats/cat4", 'd');
+    fs_readblock("user1", "password1", session, seq++, "/dir/file", 2, readdata);
+    fs_readblock("user1", "password1", session, seq++, "/dir/file", 0, readdata);
 
     for (size_t i = 0; i < 126; i++) {
         fs_writeblock("user1", "password1", session, seq++, "/dir/file", i, writedata);

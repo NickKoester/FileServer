@@ -10,18 +10,35 @@ Path::Path(const char *pathname) {
         return;
     }
 
+    if (!pathname || pathname[0] != '/') {
+        throw std::runtime_error("Malformed path\n");
+    }
+
     while(!done) {
         char name[FS_MAXFILENAME + 1];
-        int i = 0;
+        uint32_t i = 0;
 
         ++nameIdx;
         while(pathname[nameIdx] != '/' && pathname[nameIdx] != '\0') {
+            if (isspace(pathname[nameIdx])) {
+                throw std::runtime_error("File/directory name must not contain whitespace\n");
+            }
+
+            if (i >= FS_MAXFILENAME) {
+                throw std::runtime_error("File name exceeds maximum length\n");
+            }
+
             name[i++] = pathname[nameIdx++];
+        }
+
+        if (!i) {
+            throw std::runtime_error("File/directory name must be non-empty\n");
         }
 
         if(!pathname[nameIdx]) {
             done = true;
         }
+
         name[i++] = '\0';
 
         string nameStr(name);

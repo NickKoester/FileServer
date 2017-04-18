@@ -24,5 +24,6 @@ testSession.cpp
 testCreateDir.cpp
 testCreateF.cpp
 testDelete.cpp
+testPath.cpp
 testInit.cpp
 test04.cpp
