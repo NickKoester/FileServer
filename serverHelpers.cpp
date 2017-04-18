@@ -1,3 +1,4 @@
+#include "UserManager.h"
 #include "serverHelpers.h"
 #include "requests.h"
 #include <iostream>
@@ -8,6 +9,8 @@
 #include <string>
 using namespace std;
 
+extern UserManager userManager;
+
 void requestHandler(int sockfd) {
 
     Request request(sockfd);
@@ -15,7 +18,19 @@ void requestHandler(int sockfd) {
     request.parseHeader();
 
     // very important that this is not before request.parseHeader();
-    const char* password = users[request.getUsername()].c_str(); 
+    string passwordStr;
+    try {
+        passwordStr = userManager.lookupPassword(request.getUsername());
+    } catch (std::runtime_error &e) {
+        cout_lock.lock();
+        cerr << e.what();
+        cout_lock.unlock();
+
+        close(sockfd);
+        return;
+    }
+
+    const char* password = passwordStr.c_str(); 
     request.parseRequestAndDecrypt(password);
    
     request.parseRequestParameters();
@@ -23,7 +38,10 @@ void requestHandler(int sockfd) {
     try {
         request.validateInput();
     } catch (std::runtime_error &e) {
+        cout_lock.lock();
         cerr << e.what();
+        cout_lock.unlock();
+
         close(sockfd);
         return;
     }
@@ -31,67 +49,95 @@ void requestHandler(int sockfd) {
     switch(request.getRequestType())
     {
         case SESSION:
+            cout_lock.lock();
             cout << "Session Request\n";
+            cout_lock.unlock();
 
             try {
                 sessionRequest(&request); 
             } catch (std::runtime_error &e) {
+                cout_lock.lock();
                 cerr << e.what();
+                cout_lock.unlock();
+
                 close(sockfd);
                 return;
             }
             break;
 
         case READBLOCK:
+            cout_lock.lock();
             cout << "Readblock Request\n";
+            cout_lock.unlock();
 
             try {
                 readRequest(&request);
             } catch (std::runtime_error &e) {
+                cout_lock.lock();
                 cerr << e.what();
+                cout_lock.unlock();
+
                 close(sockfd);
                 return;
             }
             break;
 
         case WRITEBLOCK:
+            cout_lock.lock();
             cout << "Writeblock Request\n";
+            cout_lock.unlock();
 
             try {
                 writeRequest(&request);
             } catch (std::runtime_error &e) {
+                cout_lock.lock();
                 cerr << e.what();
+                cout_lock.unlock();
+
                 close(sockfd);
                 return;
             }
             break;
 
         case CREATE:
+            cout_lock.lock();
             cout << "Create Request\n";
+            cout_lock.unlock();
 
             try {
                 createRequest(&request);
             } catch (std::runtime_error &e) {
+                cout_lock.lock();
                 cerr << e.what();
+                cout_lock.unlock();
+
                 close(sockfd);
                 return;
             }
             break;
 
         case DELETE:
+            cout_lock.lock();
             cout << "Delete Request\n";
+            cout_lock.unlock();
 
             try {
                 deleteRequest(&request);
             } catch (std::runtime_error &e) {
+                cout_lock.lock();
                 cerr << e.what();
+                cout_lock.unlock();
+
                 close(sockfd);
                 return;
             }
             break;
 
         default:
+            cout_lock.lock();
             cerr << "Invalid request\n";
+            cout_lock.unlock();
+
             close(sockfd);
             return;
     }
@@ -117,7 +163,7 @@ void requestHandler(int sockfd) {
     close(sockfd);
 }
 
-/* Initializes the username/password map */
+/* Initializes the username/password map 
 void initializeUsers(std::unordered_map<std::string, std::string> &users) {
     string user;
     string password;
@@ -126,6 +172,7 @@ void initializeUsers(std::unordered_map<std::string, std::string> &users) {
         users[user] = password;
     }
 }
+*/
 
 int createCleartextHeader(char* buf, unsigned int s) {
     return sprintf(buf, "%d", s) + 1; // + 1 to include '\0'

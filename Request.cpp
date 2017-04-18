@@ -66,7 +66,10 @@ void Request::parseHeader() {
 
         if (received == -1) {
             close(sockfd);
+
+            cout_lock.lock();
             cerr << "error receiving message" << endl;
+            cout_lock.unlock();
         }
 
         if (received == 0) return;
@@ -88,7 +91,10 @@ void Request::parseRequestAndDecrypt(const char* password) {
         int received = recv(sockfd, encrypted + rcv, encrypted_request_size - rcv, 0);
         if (received == -1) {
             close(sockfd);
+
+            cout_lock.lock();
             cerr << "error receiving message" << endl;
+            cout_lock.unlock();
         }
         if (received == 0) break;
         rcv += received;

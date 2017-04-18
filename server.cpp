@@ -15,21 +15,20 @@
 #include "BlockManager.h"
 #include "SessionManager.h"
 #include "LockManager.h"
+#include "UserManager.h"
 using namespace std;
 
 
 struct sockaddr_in addr, cli_addr;
 
-unordered_map<string, string> users;
-
-
+UserManager userManager;
 BlockManager blockManager;
 SessionManager sessionManager;
 LockManager lockManager;
 
 int main(int argc, char *argv[])
 {
-    initializeUsers(users);
+    userManager.initialize();
     blockManager.initialize();
 
     /******* SOCKET STUFF *********/
@@ -38,7 +37,9 @@ int main(int argc, char *argv[])
     // Creating a TCP socket
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd == -1) {
+        cout_lock.lock();
         cerr << "Error opening stream socket\n";
+        cout_lock.unlock();
         return -1;
     }
     
@@ -47,7 +48,9 @@ int main(int argc, char *argv[])
     int enable = 1;
     // Reusing ports or something
     if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) == -1) {
+        cout_lock.lock();
         cerr << "Error in setsockopt\n";
+        cout_lock.unlock();
         return -1;
     }
 
@@ -56,17 +59,23 @@ int main(int argc, char *argv[])
     addr.sin_port = htons(port_number);
     
     if (bind(sockfd, (struct sockaddr*) &addr, sizeof(addr)) == -1) {
+        cout_lock.lock();
         cerr << "Error binding stream socket\n";
+        cout_lock.unlock();
         return -1;
     }
 
     socklen_t length = sizeof(addr);
     if (getsockname(sockfd, (struct sockaddr *) &addr, &length) == -1) {
+        cout_lock.lock();
         cerr << "Error getting socket name\n";
+        cout_lock.unlock();
         return -1;
     }
 
+    cout_lock.lock();
     cout << "\n@@@ port " << ntohs(addr.sin_port) << endl;
+    cout_lock.unlock();
 
     listen(sockfd, 10);
     /********* SERVER STUFF *******/
