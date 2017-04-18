@@ -54,7 +54,7 @@ void readRequest(Request *request) {
         throw std::runtime_error("Cannot read from directory\n");
     }
 
-    if (strcmp(file_inode.owner, request->getUsername().c_str())) {
+    if (!isOwner(file_inode, request)) {
         lockManager.releaseReadLock(file_inode_blocknum);
         throw std::runtime_error("You do not own this file\n");
     }
@@ -90,7 +90,7 @@ void writeRequest(Request *request) {
         throw std::runtime_error("Cannot write to directory\n");
     }
 
-    if (strcmp(file_inode.owner, request->getUsername().c_str())) {
+    if (isOwner(file_inode, request)) {
         lockManager.releaseWriteLock(file_inode_blocknum);
         throw std::runtime_error("You do not own this file\n");
     }
@@ -158,7 +158,7 @@ void createRequest(Request *request) {
     }
 
     //checks that we own directory,  short circuits if parent_inode_block is 0
-    if (parent_inode_block && strcmp(parent_inode.owner, request->getUsername().c_str())) {
+    if (parent_inode_block && isOwner(parent_inode, request)) {
         blockManager.freeBlock(file_block);
         lockManager.releaseWriteLock(parent_inode_block);
         throw std::runtime_error("You do not own this directory\n");
@@ -240,7 +240,7 @@ void deleteRequest(Request *request) {
     disk_readblock(parent_inode_block, &parent_inode);
 
     //checks that we own this file -- short circuits if root directory
-    if (parent_inode_block && strcmp(parent_inode.owner, request->getUsername().c_str())) {
+    if (parent_inode_block && isOwner(parent_inode, request)) {
         lockManager.releaseWriteLock(parent_inode_block);
         throw std::runtime_error("You do not own this directory\n");
     }
@@ -269,7 +269,7 @@ void deleteRequest(Request *request) {
     }
 
     //check that we own this entity before delete
-    if (strcmp(file_inode.owner, request->getUsername().c_str())) {
+    if (isOwner(file_inode, request)) {
         lockManager.releaseWriteLock(parent_inode_block);
         lockManager.releaseWriteLock(file_inode_block);
         throw std::runtime_error("You do not own this directory\n");
@@ -443,8 +443,6 @@ uint32_t traversePath(Request *request, const Path &path, int depth, bool write)
         throw std::runtime_error("Invalid path\n");
     }
 
-    const char *username = request->getUsername().c_str();
-
     uint32_t parentBlock = 0;
     uint32_t childBlock = 0;
 
@@ -461,7 +459,7 @@ uint32_t traversePath(Request *request, const Path &path, int depth, bool write)
         disk_readblock(parentBlock, &parentDirectory);
 
         //checks that we have permission to access this file
-        if((parentBlock && strcmp(parentDirectory.owner, username))) {
+        if((parentBlock && isOwner(parentDirectory, request))) {
             string message = string("\"")              +
                              path.getNameString(i - 1) +
                              string("\" permission denied.\n");
@@ -524,4 +522,8 @@ uint32_t findBlock(fs_inode *parent, const char *name) {
     }
 
     return 0;
+}
+
+bool isOwner(fs_inode* file, Request* request) {
+    return strcmp(file->owner, request->getUsername().c_str()) == 0;
 }

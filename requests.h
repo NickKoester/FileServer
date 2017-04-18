@@ -25,4 +25,6 @@ void removeDirentry(fs_inode *dir_inode, uint32_t dir_inode_block, uint32_t dire
 uint32_t findBlock(fs_inode *parent, const char *name);
 uint32_t traversePath(Request *request, const Path &path, int depth, bool write);
 
+bool isOwner(fs_inode*, Request*);
+
 #endif
