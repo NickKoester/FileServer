@@ -69,6 +69,11 @@ void BlockManager::initialize() {
 uint32_t BlockManager::getFreeBlock() {
     blockLock.lock();
 
+    if (freeBlocks.empty()) {
+        blockLock.unlock();
+        throw std::runtime_error("Unable to get free block because file system is full\n");
+    }
+
     uint32_t freeBlock = freeBlocks.front();
     freeBlocks.pop();
 

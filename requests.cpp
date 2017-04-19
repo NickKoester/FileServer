@@ -115,7 +115,11 @@ void writeRequest(Request *request) {
     if (block < file_inode.size) {
         data_block = file_inode.blocks[block];
     } else if (file_inode.size == block) {
-        data_block = blockManager.getFreeBlock();
+        try {
+            data_block = blockManager.getFreeBlock();
+        } catch (std::runtime_error &e) {
+            throw e;
+        }
         added = true;
     } else {
         lockManager.releaseWriteLock(file_inode_blocknum);
@@ -141,7 +145,12 @@ void createRequest(Request *request) {
     //  Reserve blocks?
 
     fs_inode new_inode, parent_inode;
-    uint32_t file_block = blockManager.getFreeBlock();
+    uint32_t file_block;
+    try {
+        file_block = blockManager.getFreeBlock();
+    } catch (std::runtime_error &e) {
+        throw e;
+    }
 
     new_inode.type = request->getType();
     strcpy(new_inode.owner, request->getUsername().c_str());
@@ -208,7 +217,12 @@ void createRequest(Request *request) {
 
         memset(direntries, 0, FS_DIRENTRIES * sizeof(fs_direntry));
 
-        direntry_block = blockManager.getFreeBlock();
+        try {
+            direntry_block = blockManager.getFreeBlock();
+        } catch (std::runtime_error &e) {
+            throw e;
+        }
+
         parent_inode.blocks[parent_inode.size++] = direntry_block;
     }
 
