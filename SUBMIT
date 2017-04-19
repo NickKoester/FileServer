@@ -28,8 +28,6 @@ test05.cpp
 testSpec.cpp
 testCreateDir.cpp
 testDelete.cpp
-testPath.cpp
-testInit.cpp
 testInvalidSession.cpp
 testKitchenSink.cpp
 testMultithread01.cpp
