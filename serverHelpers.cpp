@@ -12,14 +12,11 @@ using namespace std;
 extern UserManager userManager;
 
 void requestHandler(int sockfd) {
-
     Request request(sockfd);
 
-    request.parseHeader();
-
-    // very important that this is not before request.parseHeader();
     string passwordStr;
     try {
+        request.parseHeader();
         passwordStr = userManager.lookupPassword(request.getUsername());
     } catch (std::runtime_error &e) {
         cout_lock.lock();
@@ -31,7 +28,6 @@ void requestHandler(int sockfd) {
     }
 
     const char* password = passwordStr.c_str(); 
-    //request.parseRequestAndDecrypt(password);
    
     try {
         request.parseRequestAndDecrypt(password);
@@ -162,17 +158,6 @@ void requestHandler(int sockfd) {
     delete [] encrypted_response;
     close(sockfd);
 }
-
-/* Initializes the username/password map 
-void initializeUsers(std::unordered_map<std::string, std::string> &users) {
-    string user;
-    string password;
-    while (cin >> user) {
-        cin >> password;
-        users[user] = password;
-    }
-}
-*/
 
 int createCleartextHeader(char* buf, unsigned int s) {
     return sprintf(buf, "%d", s) + 1; // + 1 to include '\0'
