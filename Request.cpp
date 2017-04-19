@@ -11,7 +11,7 @@
 
 using namespace std;
 
-const int MAX_HEADER_SIZE = (sizeof(char) * FS_MAXUSERNAME) + sizeof(unsigned) + sizeof(char);
+const int MAX_HEADER_SIZE = (sizeof(char) * FS_MAXUSERNAME) + 12 * sizeof(char);
 
 
 Request::Request(int in_sockfd) {
@@ -51,7 +51,7 @@ char* Request::getData() {
 }
 
 void Request::sendResponse(char* text, unsigned size) {
-    send(sockfd, text, size, 0);
+    send(sockfd, text, size, MSG_NOSIGNAL);
 }
 
 void Request::parseHeader() {
@@ -62,7 +62,7 @@ void Request::parseHeader() {
     // receive 1 byte at a time until we get the whole header
     // receiving a ' ' denotes we have reached end of username
     // i - 1 because we're checking the most recent received byte
-    while (i == 0 || header[i - 1] != '\0') {
+    while ((i == 0 || header[i - 1] != '\0') && i < MAX_HEADER_SIZE) {
         int received = recv(sockfd, header + i, 1, 0);
 
         if (received == -1) {
@@ -82,7 +82,12 @@ void Request::parseHeader() {
         } 
         i += received;
     }
+
     encrypted_request_size = atoi(header + endOfUsername);
+
+    if (!encrypted_request_size) {
+        throw std::runtime_error("Malformed header\n");
+    }
 }
 
 void Request::parseRequestAndDecrypt(const char* password) {
@@ -138,6 +143,10 @@ void Request::parseRequestParameters() {
     {
         block = getNextInteger(i); 
 
+        if (block >= FS_MAXFILEBLOCKS) {
+            throw std::runtime_error("Block out of range\n");
+        }
+
         if (request_type == WRITEBLOCK) 
         {
             memcpy(data, request + i, FS_BLOCKSIZE);
@@ -145,7 +154,10 @@ void Request::parseRequestParameters() {
     }
     else if (request_type == CREATE) {
         type = request[i];
-        assert(type == 'f' || type == 'd');
+
+        if (!(type == 'f' || type == 'd')) {
+            throw std::runtime_error("Invalid create request");
+        }
     }
 }
 
@@ -231,7 +243,7 @@ void Request::validateInput() {
 }
 
 Request::~Request() {
-    delete [] request;
+    delete[] request;
     delete path;
     delete[] data;
 }

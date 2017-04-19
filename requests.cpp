@@ -25,19 +25,6 @@ void sessionRequest(Request *request) {
 }
 
 void readRequest(Request *request) {
-    //validate input
-    //  user owns file
-    //  path is valid
-    //  file has enough blocks
-    //
-    //get inode of file
-    //read the correct block
-    //return char* to the data
-    
-    if (request->getBlock() >= FS_MAXFILEBLOCKS) {
-        throw std::runtime_error("Invalid read\n");
-    }
-
     fs_inode file_inode;
 
     Path *path = request->getPath();
@@ -77,12 +64,7 @@ void readRequest(Request *request) {
 }
 
 void writeRequest(Request *request) {
-    //  username owns file -> must be done after the tree is traversed
-
     unsigned block = request->getBlock();
-    if (block >= FS_MAXFILEBLOCKS) {
-        throw std::runtime_error("File exceeds maximum size\n");
-    }
 
     fs_inode file_inode;
 
@@ -138,12 +120,6 @@ void writeRequest(Request *request) {
 }
 
 void createRequest(Request *request) {
-    //Want to
-    //  Read up to parent directory
-    //    throw exception if unable (file in path or non-existant)
-    //  Check permisisions
-    //  Reserve blocks?
-
     fs_inode new_inode, parent_inode;
     uint32_t file_block;
     try {
@@ -243,10 +219,6 @@ void createRequest(Request *request) {
 }
 
 void deleteRequest(Request *request) {
-    //validate inputs
-    //
-    //  check that username owns file
-
     Path *path = request->getPath();
 
     if (!path->depth()) {
@@ -402,37 +374,6 @@ void removeDirentry(fs_inode *dir_inode, uint32_t dir_inode_block, uint32_t dire
 // returns size of this response
 // expects caller to free the response
 char* createResponse(Request *request, unsigned &response_size) {
-    string response = std::to_string(request->getSession()) + " " +
-                      std::to_string(request->getSequence());
-    char* res;
-
-    if(request->isReadRequest()) {
-        assert(request->getData());
-        string tmp(request->getData());
-        response_size = response.size() + FS_BLOCKSIZE + 1;
-        res = new char[response_size];
-
-        unsigned i;
-        for (i=0; i<response.size(); ++i) {
-            res[i] = response[i];
-        }
-        res[i++] = '\0';
-
-        unsigned k;
-        for (k=0; k<FS_BLOCKSIZE; ++k) {
-            res[i + k] = request->getData()[k];
-        }
-    }
-    else {
-        response_size = response.size() + 1;
-        res = new char[response_size];
-        strcpy(res, response.c_str());
-    }
- 
-    return res;
-}
-
-char* createGoodResponse(Request *request, unsigned &response_size) {
     string response = std::to_string(request->getSession()) + " " +
                       std::to_string(request->getSequence());
     char* res;
