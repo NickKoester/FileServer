@@ -77,8 +77,9 @@ int main(int argc, char* argv[])
     fs_session("user4", "password5", &sess, seq3++);
     sess = 0;
     fs_session("nope", "password5", &sess, seq3++);     
-   // sess = 1;
-   // fs_session("user3", "password3", &sess, seq3++); 
+    sess = 1;
+   
+    fs_session("user3", "password3", &sess, seq3++); 
 
     return 0;
 }

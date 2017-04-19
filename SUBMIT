@@ -32,3 +32,4 @@ testPath.cpp
 testInit.cpp
 testInvalidSession.cpp
 testKitchenSink.cpp
+testMultithread01.cpp
