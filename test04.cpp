@@ -29,6 +29,10 @@ int main(int argc, char* argv[])
     char buf[FS_BLOCKSIZE];
 
     fs_clientinit(server, port);
+
+    fs_session("hello", "password3", &session, seq++);
+    session = 0;
+
     fs_session(username, password, &session, seq++);
     fs_create(username, password, session, seq++, "/andrew", 'd');
     fs_create(username, password, session, seq++, "/andrew/hi", 'd');
@@ -36,10 +40,16 @@ int main(int argc, char* argv[])
     fs_create(username, password, session, seq++, "/andrew/hi", 'f');
     fs_delete(username, password, session, seq++, "/andrew/hi");
     fs_create(username, password, session, seq++, "/andrew/bye", 'd');
-
+    
+    fs_create(username, password, session, seq++, "/andrew/hi", 'f');
+ 
     unsigned int ses = 0;
     unsigned int seq2= 0;
     fs_session("user2", "password2", &ses, seq2);
+    fs_writeblock("user2", "password2", ses, seq2++, "/andrew/hi", 0, words);
+
+    seq2++;
+
     fs_writeblock("user2", "password2", ses, seq2++, "/andrew/hi", 0, words);  
     fs_readblock("user2", "password2", ses, seq2++, "/andrew/hi", 1, buf);
    
@@ -64,11 +74,11 @@ int main(int argc, char* argv[])
    
     unsigned int sess = 0;
     unsigned int seq3 = 0;
-    fs_session("user3", "wrong", &sess, seq3++);
+    fs_session("user4", "password5", &sess, seq3++);
     sess = 0;
-    fs_session("nope", "password3", &sess, seq3++);     
-    sess = 1;
-    fs_session("user3", "password3", &sess, seq3++); 
+    fs_session("nope", "password5", &sess, seq3++);     
+   // sess = 1;
+   // fs_session("user3", "password3", &sess, seq3++); 
 
     return 0;
 }

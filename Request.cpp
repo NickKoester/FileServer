@@ -18,6 +18,7 @@ Request::Request(int in_sockfd) {
     sockfd = in_sockfd;
     path = nullptr;
     data = nullptr;
+    request = nullptr;
     isRead = false;
 }
 
@@ -108,9 +109,12 @@ void Request::decryptRequest(const char* password, char* encrypted) {
     
     request = static_cast<char*>(fs_decrypt(password, encrypted, encrypted_request_size, decrypted_msg_size));
     request_size = decrypted_msg_size[0];
- 
-    if (request == nullptr) close(sockfd);
+    
     delete [] decrypted_msg_size;
+ 
+    if (request == nullptr) {
+        throw std::runtime_error("can't decrypt");
+    }
 }
 
 void Request::parseRequestParameters() {
