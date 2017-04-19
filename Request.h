@@ -9,12 +9,16 @@
 extern SessionManager sessionManager;
 enum REQUEST_T { SESSION, READBLOCK, WRITEBLOCK, CREATE, DELETE };
 
+//This class keeps track of everything about a request that we get
 class Request {
 public:
+    //Constructs the request and associates it with a socket
     Request(int in_sockfd);
 
+    //Parses the header and records the relevent information
     void parseHeader();
 
+    //Parses the request and decrypts it
     void parseRequestAndDecrypt(const char* password);
 
     void parseRequestParameters();

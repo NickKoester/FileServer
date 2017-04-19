@@ -25,6 +25,7 @@ test02.cpp
 test03.cpp
 test04.cpp
 test05.cpp
+test22.cpp
 testSpec.cpp
 testCreateDir.cpp
 testDelete.cpp
